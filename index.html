@@ -1,0 +1,321 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  Search, X, Video, MapPin, Box, BookOpen, Settings2,
+  ArrowRight, Sparkles, ChevronRight, FileText, Check
+} from 'lucide-react';
+import { FORMATS, CATEGORIES } from '../converters';
+import { useLanguage } from '../i18n';
+
+interface MegaMenuDropdownProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectConversion: (sourceFormatId: string, targetFormatId?: string) => void;
+}
+
+interface ConversionLink {
+  sourceId: string;
+  sourceName: string;
+  sourceExt: string;
+  targetId: string;
+  targetExt: string;
+  label: string;
+  isMainConverter?: boolean;
+}
+
+interface ColumnGroup {
+  id: string;
+  title: string;
+  icon: any;
+  items: ConversionLink[];
+}
+
+export const MegaMenuDropdown: React.FC<MegaMenuDropdownProps> = ({
+  isOpen,
+  onClose,
+  onSelectConversion,
+}) => {
+  const { t } = useLanguage();
+  const [searchQuery, setSearchQuery] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape or click outside
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  // Define structured columns covering all 30 formats
+  const columns: ColumnGroup[] = useMemo(() => [
+    {
+      id: 'subtitles_broadcast',
+      title: 'Проф. субтитры (ТВ/Кино)',
+      icon: Video,
+      items: [
+        { sourceId: 'ttml', sourceName: 'TTML', sourceExt: 'ttml', targetId: 'srt', targetExt: 'srt', label: 'TTML в SRT' },
+        { sourceId: 'ttml', sourceName: 'TTML', sourceExt: 'ttml', targetId: 'vtt', targetExt: 'vtt', label: 'TTML в VTT' },
+        { sourceId: 'dfxp', sourceName: 'DFXP', sourceExt: 'dfxp', targetId: 'srt', targetExt: 'srt', label: 'DFXP в SRT' },
+        { sourceId: 'dfxp', sourceName: 'DFXP', sourceExt: 'dfxp', targetId: 'vtt', targetExt: 'vtt', label: 'DFXP в VTT' },
+        { sourceId: 'sami', sourceName: 'SAMI', sourceExt: 'smi', targetId: 'srt', targetExt: 'srt', label: 'SAMI (.smi) в SRT' },
+        { sourceId: 'ssa', sourceName: 'SSA', sourceExt: 'ssa', targetId: 'srt', targetExt: 'srt', label: 'SubStation Alpha в SRT' },
+        { sourceId: 'ssa', sourceName: 'SSA', sourceExt: 'ssa', targetId: 'ass', targetExt: 'ass', label: 'SSA в ASS' },
+        { sourceId: 'spruce_stl', sourceName: 'Spruce STL', sourceExt: 'stl', targetId: 'srt', targetExt: 'srt', label: 'Spruce STL в SRT' },
+        { sourceId: 'scc', sourceName: 'SCC', sourceExt: 'scc', targetId: 'srt', targetExt: 'srt', label: 'Scenarist SCC в SRT' },
+        { sourceId: 'avid_ds', sourceName: 'Avid DS', sourceExt: 'txt', targetId: 'srt', targetExt: 'srt', label: 'Avid DS Subtitle в SRT' },
+        { sourceId: 'cheetah_cap', sourceName: 'Cheetah CAP', sourceExt: 'cap', targetId: 'srt', targetExt: 'srt', label: 'Cheetah CAP в SRT' },
+        { sourceId: 'ebu_stl', sourceName: 'EBU-STL', sourceExt: 'stl', targetId: 'srt', targetExt: 'srt', label: 'EBU-STL в SRT' },
+      ],
+    },
+    {
+      id: 'subtitles_players',
+      title: 'Плееры, веб и караоке',
+      icon: Video,
+      items: [
+        { sourceId: 'srt', sourceName: 'SRT', sourceExt: 'srt', targetId: 'vtt', targetExt: 'vtt', label: 'SRT в WebVTT' },
+        { sourceId: 'srt', sourceName: 'SRT', sourceExt: 'srt', targetId: 'html', targetExt: 'html', label: 'SRT в интерактивный HTML' },
+        { sourceId: 'srt', sourceName: 'SRT', sourceExt: 'srt', targetId: 'csv', targetExt: 'csv', label: 'SRT в Excel CSV' },
+        { sourceId: 'vtt', sourceName: 'WebVTT', sourceExt: 'vtt', targetId: 'srt', targetExt: 'srt', label: 'WebVTT в SRT' },
+        { sourceId: 'vtt', sourceName: 'WebVTT', sourceExt: 'vtt', targetId: 'html', targetExt: 'html', label: 'WebVTT в HTML скрипт' },
+        { sourceId: 'sbv', sourceName: 'YouTube SBV', sourceExt: 'sbv', targetId: 'srt', targetExt: 'srt', label: 'YouTube SBV в SRT' },
+        { sourceId: 'lrc', sourceName: 'LRC Karaoke', sourceExt: 'lrc', targetId: 'srt', targetExt: 'srt', label: 'LRC караоке в SRT' },
+        { sourceId: 'timedtext_xml', sourceName: 'TimedText XML', sourceExt: 'xml', targetId: 'srt', targetExt: 'srt', label: 'TimedText XML в SRT' },
+        { sourceId: 'subviewer1', sourceName: 'SubViewer 1.0', sourceExt: 'sub', targetId: 'srt', targetExt: 'srt', label: 'SubViewer 1.0 в SRT' },
+        { sourceId: 'subviewer2', sourceName: 'SubViewer 2.0', sourceExt: 'sub', targetId: 'srt', targetExt: 'srt', label: 'SubViewer 2.0 в SRT' },
+        { sourceId: 'microdvd', sourceName: 'MicroDVD', sourceExt: 'sub', targetId: 'srt', targetExt: 'srt', label: 'MicroDVD (.sub) в SRT' },
+        { sourceId: 'mpsub', sourceName: 'MPSub', sourceExt: 'sub', targetId: 'srt', targetExt: 'srt', label: 'MPSub (.sub) в SRT' },
+        { sourceId: 'realtext', sourceName: 'RealText', sourceExt: 'rt', targetId: 'srt', targetExt: 'srt', label: 'RealText (.rt) в SRT' },
+        { sourceId: 'qt_txt', sourceName: 'QuickTime Text', sourceExt: 'txt', targetId: 'srt', targetExt: 'srt', label: 'QuickTime Text в SRT' },
+      ],
+    },
+    {
+      id: 'data_tables',
+      title: 'Таблицы и базы данных',
+      icon: Settings2,
+      items: [
+        { sourceId: 'csv', sourceName: 'CSV', sourceExt: 'csv', targetId: 'json', targetExt: 'json', label: 'CSV в JSON' },
+        { sourceId: 'csv', sourceName: 'CSV', sourceExt: 'csv', targetId: 'sql', targetExt: 'sql', label: 'CSV в SQL INSERT' },
+        { sourceId: 'csv', sourceName: 'CSV', sourceExt: 'csv', targetId: 'md', targetExt: 'md', label: 'CSV в Markdown таблицу' },
+        { sourceId: 'csv', sourceName: 'CSV', sourceExt: 'csv', targetId: 'yaml', targetExt: 'yaml', label: 'CSV в YAML' },
+        { sourceId: 'tsv', sourceName: 'TSV', sourceExt: 'tsv', targetId: 'csv', targetExt: 'csv', label: 'TSV в CSV' },
+        { sourceId: 'tsv', sourceName: 'TSV', sourceExt: 'tsv', targetId: 'json', targetExt: 'json', label: 'TSV в JSON' },
+        { sourceId: 'tsv', sourceName: 'TSV', sourceExt: 'tsv', targetId: 'md', targetExt: 'md', label: 'TSV в Markdown' },
+        { sourceId: 'json', sourceName: 'JSON', sourceExt: 'json', targetId: 'csv', targetExt: 'csv', label: 'JSON в CSV' },
+        { sourceId: 'json', sourceName: 'JSON', sourceExt: 'json', targetId: 'yaml', targetExt: 'yaml', label: 'JSON в YAML' },
+        { sourceId: 'json', sourceName: 'JSON', sourceExt: 'json', targetId: 'sql', targetExt: 'sql', label: 'JSON в SQL INSERT' },
+        { sourceId: 'yaml', sourceName: 'YAML', sourceExt: 'yaml', targetId: 'json', targetExt: 'json', label: 'YAML в JSON' },
+        { sourceId: 'xml', sourceName: 'XML', sourceExt: 'xml', targetId: 'json', targetExt: 'json', label: 'XML в JSON' },
+        { sourceId: 'html_table', sourceName: 'HTML Таблицы', sourceExt: 'html', targetId: 'csv', targetExt: 'csv', label: 'HTML таблицы в CSV' },
+        { sourceId: 'html_table', sourceName: 'HTML Таблицы', sourceExt: 'html', targetId: 'json', targetExt: 'json', label: 'HTML таблицы в JSON' },
+      ],
+    },
+    {
+      id: 'graphics_code',
+      title: 'Графика, код и медиа',
+      icon: Sparkles,
+      items: [
+        { sourceId: 'svg', sourceName: 'SVG', sourceExt: 'svg', targetId: 'png', targetExt: 'png', label: 'SVG в растровый PNG' },
+        { sourceId: 'svg', sourceName: 'SVG', sourceExt: 'svg', targetId: 'webp', targetExt: 'webp', label: 'SVG в современный WebP' },
+        { sourceId: 'svg', sourceName: 'SVG', sourceExt: 'svg', targetId: 'jsx', targetExt: 'tsx', label: 'SVG в React JSX компонент' },
+        { sourceId: 'svg', sourceName: 'SVG', sourceExt: 'svg', targetId: 'datauri', targetExt: 'txt', label: 'SVG в Base64 Data URI' },
+        { sourceId: 'base64', sourceName: 'Base64', sourceExt: 'b64', targetId: 'bin', targetExt: 'bin', label: 'Base64 в двоичный файл' },
+        { sourceId: 'base64', sourceName: 'Base64', sourceExt: 'txt', targetId: 'txt', label: 'Base64 в текст UTF-8' },
+        { sourceId: 'base64', sourceName: 'Base64', sourceExt: 'b64', targetId: 'img', targetExt: 'png', label: 'Base64 в PNG картинку' },
+        { sourceId: 'md', sourceName: 'Markdown', sourceExt: 'md', targetId: 'html', targetExt: 'html', label: 'Markdown (.md) в HTML' },
+        { sourceId: 'md', sourceName: 'Markdown', sourceExt: 'md', targetId: 'txt', targetExt: 'txt', label: 'Markdown (.md) в Plain Text' },
+        { sourceId: 'm3u', sourceName: 'M3U / M3U8', sourceExt: 'm3u', targetId: 'txt', targetExt: 'txt', label: 'M3U в список URL (TXT)' },
+        { sourceId: 'm3u', sourceName: 'M3U / M3U8', sourceExt: 'm3u', targetId: 'csv', targetExt: 'csv', label: 'M3U в таблицу CSV' },
+        { sourceId: 'm3u', sourceName: 'M3U / M3U8', sourceExt: 'm3u', targetId: 'pls', targetExt: 'pls', label: 'M3U в Winamp PLS' },
+        { sourceId: 'cue', sourceName: 'CUE Sheet', sourceExt: 'cue', targetId: 'm3u8', targetExt: 'm3u8', label: 'CUE в M3U8 плейлист' },
+      ],
+    },
+    {
+      id: 'geo_3d_docs',
+      title: 'Гео, 3D и Наука',
+      icon: MapPin,
+      items: [
+        { sourceId: 'gpx', sourceName: 'GPX', sourceExt: 'gpx', targetId: 'kml', targetExt: 'kml', label: 'GPX в Google KML' },
+        { sourceId: 'gpx', sourceName: 'GPX', sourceExt: 'gpx', targetId: 'geojson', targetExt: 'json', label: 'GPX в GeoJSON' },
+        { sourceId: 'kml', sourceName: 'KML', sourceExt: 'kml', targetId: 'gpx', targetExt: 'gpx', label: 'KML в GPS GPX' },
+        { sourceId: 'obj', sourceName: 'Wavefront OBJ', sourceExt: 'obj', targetId: 'stl', targetExt: 'stl', label: 'OBJ в STL (3D-печать)' },
+        { sourceId: 'stl', sourceName: 'Stereolithography STL', sourceExt: 'stl', targetId: 'obj', targetExt: 'obj', label: 'STL в OBJ полигоны' },
+        { sourceId: 'bib', sourceName: 'BibTeX', sourceExt: 'bib', targetId: 'ris', targetExt: 'ris', label: 'BibTeX в Mendeley RIS' },
+        { sourceId: 'ris', sourceName: 'RIS', sourceExt: 'ris', targetId: 'bib', targetExt: 'bib', label: 'RIS в LaTeX BibTeX' },
+        { sourceId: 'fb2', sourceName: 'FictionBook FB2', sourceExt: 'fb2', targetId: 'epub', targetExt: 'epub', label: 'FB2 в ридер EPUB' },
+        { sourceId: 'fb2', sourceName: 'FictionBook FB2', sourceExt: 'fb2', targetId: 'txt', targetExt: 'txt', label: 'FB2 в чистый TXT' },
+        { sourceId: 'ics', sourceName: 'iCalendar ICS', sourceExt: 'ics', targetId: 'csv', targetExt: 'csv', label: 'ICS встречи в CSV' },
+        { sourceId: 'vcf', sourceName: 'vCard VCF', sourceExt: 'vcf', targetId: 'csv', targetExt: 'csv', label: 'VCF контакты в CSV' },
+      ],
+    },
+  ], []);
+
+  // Filter columns and items based on search query
+  const filteredColumns = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return columns;
+
+    return columns
+      .map(col => ({
+        ...col,
+        items: col.items.filter(
+          item =>
+            item.label.toLowerCase().includes(q) ||
+            item.sourceId.toLowerCase().includes(q) ||
+            item.targetId.toLowerCase().includes(q) ||
+            item.sourceName.toLowerCase().includes(q)
+        ),
+      }))
+      .filter(col => col.items.length > 0);
+  }, [columns, searchQuery]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-150">
+      {/* Container anchored to top */}
+      <div className="min-h-full py-4 sm:py-6 px-3 sm:px-6 flex justify-center">
+        <div
+          ref={menuRef}
+          className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col animate-in slide-in-from-top-4 duration-200"
+        >
+          {/* Header of the Dropdown Window */}
+          <div className="px-6 py-4 sm:px-8 sm:py-5 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-stone-50/70">
+            <div>
+              <h2 className="text-lg sm:text-xl font-extrabold text-stone-900 tracking-tight flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                Все направления конвертации файлов
+              </h2>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Выберите нужное направление — откроется страница конвертера с уже выбранным целевым форматом
+              </p>
+            </div>
+
+            {/* Search Input & Close Button */}
+            <div className="flex items-center gap-3">
+              <div className="relative min-w-[240px] sm:min-w-[300px]">
+                <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Поиск: srt в vtt, gpx, obj в stl, fb2..."
+                  className="w-full pl-9 pr-8 py-2 bg-white border border-stone-200 rounded-xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 shadow-2xs"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-600 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 shadow-2xs"
+                title="Закрыть (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Multi-Column Content (Directly matching the screenshot style!) */}
+          <div className="p-6 sm:p-8 overflow-y-auto max-h-[75vh]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8">
+              {filteredColumns.map(col => {
+                const Icon = col.icon;
+                return (
+                  <div key={col.id} className="space-y-3.5">
+                    {/* Category Header */}
+                    <div className="flex items-center gap-2 pb-2.5 border-b border-stone-100">
+                      <div className="w-6 h-6 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700 flex-shrink-0">
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <h3 className="font-bold text-xs sm:text-sm text-stone-900 tracking-tight">
+                        {col.title}
+                      </h3>
+                    </div>
+
+                    {/* Links in this column */}
+                    <ul className="space-y-1.5">
+                      {col.items.map((item, idx) => (
+                        <li key={idx}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectConversion(item.sourceId, item.targetId);
+                              onClose();
+                            }}
+                            className="w-full text-left py-1 px-2 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors flex items-center justify-between group cursor-pointer"
+                          >
+                            <span className="group-hover:translate-x-0.5 transition-transform">
+                              {item.label}
+                            </span>
+                            <ChevronRight className="w-3 h-3 text-stone-300 group-hover:text-stone-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+
+            {filteredColumns.length === 0 && (
+              <div className="py-12 text-center text-stone-500">
+                <p className="text-sm font-semibold text-stone-800 mb-1">Ничего не найдено</p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer of the dropdown with all format hubs */}
+          <div className="px-6 py-3.5 sm:px-8 bg-stone-50 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-stone-500">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-stone-700">{t('allSupported')} ({FORMATS.length}):</span>
+              <div className="flex items-center gap-1 flex-wrap max-h-16 overflow-y-auto py-1">
+                {FORMATS.map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectConversion(f.id);
+                      onClose();
+                    }}
+                    title={`Открыть конвертер для ${f.name} (${f.extension})`}
+                    className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white border border-stone-200 hover:border-stone-900 hover:text-stone-900 text-stone-600 font-semibold cursor-pointer transition-colors"
+                  >
+                    {f.extension}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <span className="text-[11px] text-stone-400">
+              100% клиентская обработка без отправки на сервер
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

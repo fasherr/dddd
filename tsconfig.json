@@ -1,0 +1,50 @@
+import React from 'react';
+import { FormatSpec } from '../types';
+import { useLanguage } from '../i18n';
+import { ShieldCheck, Zap } from 'lucide-react';
+
+interface FormatFAQProps {
+  format: FormatSpec;
+  selectedTarget: string;
+}
+
+export const FormatFAQ: React.FC<FormatFAQProps> = ({ format, selectedTarget }) => {
+  const { t } = useLanguage();
+
+  return (
+    <div className="bg-white border border-stone-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 mt-8">
+      <div className="flex items-center gap-3 border-b border-stone-100 pb-4">
+        <div className="w-10 h-10 rounded-full bg-stone-100 text-stone-700 flex items-center justify-center flex-shrink-0">
+          <Zap className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-stone-900 tracking-tight">{t('faqTitle')}</h2>
+          <p className="text-xs text-stone-500">{t('conversionFrom', { source: format.extension.toUpperCase(), target: selectedTarget.toUpperCase() })}</p>
+        </div>
+      </div>
+      
+      <div className="space-y-5">
+        <div>
+          <h3 className="font-semibold text-stone-900 mb-1">{t('faqQ1', { ext: format.extension.toUpperCase() })}</h3>
+          <p className="text-stone-500 text-[13px] leading-relaxed">
+            {t('faqA1', { ext: format.extension.toUpperCase() })}
+          </p>
+        </div>
+        
+        <div>
+          <h3 className="font-semibold text-stone-900 mb-1">{t('faqQ2', { source: format.extension.toUpperCase(), target: selectedTarget.toUpperCase() })}</h3>
+          <p className="text-stone-500 text-[13px] leading-relaxed">
+            {t('faqA2', { source: format.extension.toUpperCase(), target: selectedTarget.toUpperCase() })}
+          </p>
+        </div>
+        
+        <div>
+          <h3 className="font-semibold text-stone-900 mb-1">{t('faqQ3')}</h3>
+          <p className="text-stone-500 text-[13px] leading-relaxed">
+            {t('faqA3')}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};

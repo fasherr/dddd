@@ -1,0 +1,403 @@
+import React, { useState, useEffect } from 'react';
+import {
+  ArrowLeft, Sparkles, Download, Copy, Check, FileText, ArrowRight,
+  ShieldCheck, Layers, Cpu, UploadCloud, RefreshCw
+} from 'lucide-react';
+import { FormatSpec, ConvertedFile } from '../types';
+import { FORMATS, CATEGORIES, convertContent } from '../converters';
+import { FormatFAQ } from './FormatFAQ';
+import { useLanguage } from '../i18n';
+
+interface FormatDetailPageProps {
+  format: FormatSpec;
+  initialTarget?: string;
+  onBack: () => void;
+  onSelectFormat: (formatId: string, preselectedTarget?: string) => void;
+  onSendToBatchQueue: (file: ConvertedFile) => void;
+  onNavigateToConverter: () => void;
+}
+
+export const FormatDetailPage: React.FC<FormatDetailPageProps> = ({
+  format,
+  initialTarget,
+  onBack,
+  onSelectFormat,
+  onSendToBatchQueue,
+  onNavigateToConverter,
+}) => {
+  const { t } = useLanguage();
+  // Preselected target format
+  const [selectedTarget, setSelectedTarget] = useState<string>(() => {
+    if (initialTarget && format.targets.includes(initialTarget)) {
+      return initialTarget;
+    }
+    return format.targets[0] || 'txt';
+  });
+
+  // Sync if initialTarget or format changes
+  useEffect(() => {
+    if (initialTarget && format.targets.includes(initialTarget)) {
+      setSelectedTarget(initialTarget);
+    } else {
+      setSelectedTarget(format.targets[0] || 'txt');
+    }
+  }, [initialTarget, format.id]);
+
+  // Converter state
+  const [inputContent, setInputContent] = useState<string>(format.sampleContent || '');
+  const [customFilename, setCustomFilename] = useState<string>(`document${format.extension}`);
+  const [outputContent, setOutputContent] = useState<string | null>(null);
+  const [outputFilename, setOutputFilename] = useState<string>('');
+  const [isConverting, setIsConverting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [conversionTime, setConversionTime] = useState<number | null>(null);
+
+  const categoryObj = CATEGORIES.find(c => c.id === format.category);
+  const sourceUpper = format.extension.replace('.', '').toUpperCase();
+  const targetUpper = selectedTarget.toUpperCase();
+
+  // All possible targets for this format
+  const allTargets = format.targets;
+
+  // Live conversion right on this page
+  const handleRunConversion = async () => {
+    if (!inputContent.trim()) {
+      setErrorMsg('Пожалуйста, введите или загрузите содержимое файла');
+      return;
+    }
+
+    setIsConverting(true);
+    setErrorMsg(null);
+    const start = performance.now();
+
+    try {
+      const { result, outputFilename: outName } = await convertContent(
+        inputContent,
+        format.id,
+        selectedTarget,
+        customFilename
+      );
+
+      const elapsed = Math.round(performance.now() - start);
+      setConversionTime(elapsed);
+
+      if (result instanceof Blob) {
+        const url = URL.createObjectURL(result);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = outName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setOutputContent(`[Бинарный файл «${outName}» успешно сформирован]`);
+      } else {
+        setOutputContent(result);
+      }
+      setOutputFilename(outName);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Ошибка конвертации');
+      setOutputContent(null);
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  // Upload custom file directly onto this page
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCustomFilename(file.name);
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const text = evt.target?.result as string;
+      if (text) {
+        setInputContent(text);
+        setOutputContent(null);
+        setErrorMsg(null);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCopyResult = () => {
+    if (!outputContent) return;
+    navigator.clipboard.writeText(outputContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadResult = () => {
+    if (!outputContent || !outputFilename) return;
+    const blob = new Blob([outputContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = outputFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSendToGlobalQueue = () => {
+    if (!inputContent) return;
+    const newFile: ConvertedFile = {
+      id: `file-${Date.now()}-${format.id}`,
+      originalName: customFilename,
+      originalExtension: format.extension,
+      size: new Blob([inputContent]).size,
+      sourceFormat: format.id,
+      targetFormat: selectedTarget,
+      status: 'idle',
+      sourceContent: inputContent,
+    };
+    onSendToBatchQueue(newFile);
+    onNavigateToConverter();
+  };
+
+  return (
+    <div className="w-full space-y-8 pb-16 animate-in fade-in duration-300">
+      {/* Navigation Top Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onNavigateToConverter}
+          className="inline-flex items-center gap-2 text-[13px] font-medium text-stone-500 hover:text-stone-900 bg-white border border-stone-200 hover:border-stone-300 px-4 py-2 rounded-full transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Вернуться назад
+        </button>
+
+        {/* Quick Format Switcher */}
+        <div className="flex items-center gap-3 text-[13px]">
+          <span className="text-stone-400 font-medium hidden sm:inline tracking-tight">Сменить формат:</span>
+          <select
+            aria-label="Выбрать другой формат"
+            value={format.id}
+            onChange={e => onSelectFormat(e.target.value)}
+            className="bg-white border border-stone-200 text-stone-800 font-medium rounded-full px-4 py-2 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-shadow cursor-pointer"
+          >
+            {FORMATS.map(f => (
+              <option key={f.id} value={f.id}>
+                {f.extension} — {f.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Hero Header Card */}
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8 relative z-10 pt-4">
+        <div className="space-y-4 max-w-3xl">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2 font-mono text-[13px] font-semibold">
+              <span className="px-3 py-1 rounded-md bg-stone-900 text-white">
+                {sourceUpper}
+              </span>
+              <ArrowRight className="w-4 h-4 text-stone-400" />
+              <span className="px-3 py-1 rounded-md bg-white text-stone-900 border border-stone-200 shadow-sm">
+                {targetUpper}
+              </span>
+            </div>
+            <span className="text-[13px] px-3 py-1 rounded-full bg-stone-100 text-stone-600 font-medium tracking-tight">
+              {categoryObj?.name || format.category}
+            </span>
+            <span className="text-[13px] px-3 py-1 rounded-full bg-stone-100 text-stone-600 font-medium tracking-tight flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4" />
+              {t('privacy')}
+            </span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl font-bold text-stone-900 tracking-tight leading-tight">
+            {t('conversionFrom', { source: sourceUpper, target: targetUpper })}
+          </h1>
+
+          <p className="text-base sm:text-lg text-stone-500 leading-relaxed font-medium">
+            {t('conversionDesc', { name: format.name, ext: format.extension, target: selectedTarget })}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column: Target Format Selection */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="space-y-4">
+            <h2 className="text-[15px] font-semibold text-stone-900 tracking-tight flex items-center gap-2">
+              {t('targetFormat')}
+            </h2>
+
+            <div className="flex flex-col gap-2">
+              {allTargets.map(tgt => {
+                const isSelected = selectedTarget === tgt;
+                return (
+                  <button
+                    key={tgt}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTarget(tgt);
+                      setOutputContent(null);
+                      setErrorMsg(null);
+                    }}
+                    className={`py-3 px-4 rounded-2xl font-mono text-[13px] font-semibold border transition-all text-left flex items-center justify-between cursor-pointer ${
+                      isSelected
+                        ? 'bg-stone-900 text-white border-stone-900 shadow-md'
+                        : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:border-stone-300 shadow-sm'
+                    }`}
+                  >
+                    <span>.{tgt.toUpperCase()}</span>
+                    {isSelected && <Check className="w-4 h-4 text-stone-300" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Live In-Browser Converter Workspace */}
+        <div className="lg:col-span-9 space-y-6">
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            {/* Header & File Upload */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold text-stone-900 tracking-tight flex items-center gap-2">
+                <Cpu className="w-5 h-5 text-stone-400" />
+                {t('workspace')}
+              </h2>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputContent(format.sampleContent || '');
+                    setCustomFilename(`sample_${format.id}${format.extension}`);
+                    setOutputContent(null);
+                    setErrorMsg(null);
+                  }}
+                  className="px-4 py-2.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-[13px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-stone-500" />
+                  <span className="hidden sm:inline">{t('sample')}</span>
+                </button>
+
+                <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-stone-200 hover:bg-stone-50 text-stone-800 text-[13px] font-medium transition-colors cursor-pointer shadow-sm">
+                  <UploadCloud className="w-4 h-4 text-stone-500" />
+                  {t('upload')}
+                  <input
+                    type="file"
+                    accept={format.extension}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Input Editor */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[13px] text-stone-500 font-medium px-1">
+                <span className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  {customFilename}
+                </span>
+                <span>{inputContent.length} {t('chars')}</span>
+              </div>
+
+              <textarea
+                value={inputContent}
+                onChange={e => {
+                  setInputContent(e.target.value);
+                  setOutputContent(null);
+                  setErrorMsg(null);
+                }}
+                rows={12}
+                placeholder={`Вставьте содержимое ${format.extension}...`}
+                className="w-full p-5 bg-stone-50 border border-stone-200 rounded-3xl font-mono text-[13px] text-stone-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-stone-400 transition-all resize-y leading-relaxed shadow-inner"
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={handleRunConversion}
+                disabled={isConverting || !inputContent.trim()}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white text-[14px] font-semibold transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer"
+              >
+                {isConverting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-stone-400" />
+                    {t('converting')}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-stone-300" />
+                    {t('convertBtn')} .{targetUpper}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {errorMsg && (
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-[13px] font-medium">
+                {errorMsg}
+              </div>
+            )}
+
+            {/* Output Result Viewer */}
+            {outputContent !== null && (
+              <div className="pt-6 border-t border-stone-100 space-y-4 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
+                  <div className="flex items-center gap-3 text-[13px]">
+                    <span className="font-semibold text-stone-800 flex items-center gap-1.5 bg-stone-100 px-3 py-1 rounded-full">
+                      <Check className="w-4 h-4 text-stone-500" />
+                      {t('success')}
+                    </span>
+                    <span className="font-mono font-medium text-stone-500">{outputFilename}</span>
+                    {conversionTime !== null && (
+                      <span className="text-stone-400 hidden sm:inline">({conversionTime} ms)</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyResult}
+                      className="px-4 py-2 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-[13px] font-medium flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-stone-600" /> : <Copy className="w-4 h-4 text-stone-500" />}
+                      {copied ? t('copied') : t('copy')}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadResult}
+                      className="px-4 py-2 rounded-full bg-white border border-stone-200 hover:bg-stone-50 text-stone-800 text-[13px] font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-stone-500" />
+                      {t('download')}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <pre className="p-5 bg-stone-900 text-stone-300 rounded-3xl font-mono text-[13px] overflow-x-auto max-h-[500px] leading-relaxed border border-stone-800 shadow-inner">
+                    {outputContent}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Format FAQ Section */}
+      <FormatFAQ format={format} selectedTarget={selectedTarget} />
+    </div>
+  );
+};

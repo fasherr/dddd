@@ -1,0 +1,1038 @@
+import { FormatSpec } from '../types';
+
+export const ALL_FORMAT_SPECS: FormatSpec[] = [
+  // =========================================================================
+  // 1. СУБТИТРЫ И ТАЙМКОДЫ (18 форматов)
+  // =========================================================================
+
+  // 1. TTML (.ttml) -> SRT, VTT, TXT, JSON, CSV
+  {
+    id: 'ttml',
+    extension: '.ttml',
+    name: 'Timed Text Markup Language (TTML)',
+    category: 'subtitles',
+    description: 'XML-стандарт консорциума W3C для телевидения, киностудий, Netflix, BBC и вещательного субтитрования.',
+    usedFor: 'Netflix, телевидение, профессиональный мастеринг видео, EBU-TT',
+    targets: ['srt', 'vtt', 'txt', 'json', 'csv'],
+    mimeType: 'application/ttml+xml',
+    presets: [
+      { targetFormat: 'srt', label: 'TTML ➔ SubRip (.srt)', description: 'Конвертация в стандартные субтитры для видеомонтажа и плееров', badge: 'Универсально' },
+      { targetFormat: 'vtt', label: 'TTML ➔ WebVTT (.vtt)', description: 'Веб-стандарт субтитров HTML5 для онлайн-плееров', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'TTML ➔ Чистый текст (.txt)', description: 'Извлечение реплик без XML-тегов', badge: 'Текст' },
+      { targetFormat: 'json', label: 'TTML ➔ Массив JSON (.json)', description: 'Разбор таймкодов для веб-приложений', badge: 'JSON' },
+      { targetFormat: 'csv', label: 'TTML ➔ Таблица CSV (.csv)', description: 'Экспорт таймингов в Excel', badge: 'Таблица' },
+    ],
+    details: {
+      developer: 'W3C Timed Text Working Group',
+      standardOrType: 'W3C Recommendation XML',
+      mimeTypeDetailed: 'application/ttml+xml',
+      keyFeatures: ['Элементы <p begin="..." end="...">', 'Точная синхронизация кадров и миллисекунд', 'Стилизация текста и экранные регионы'],
+      syntaxTips: 'Наш парсер автоматически считывает атрибуты begin, end и dur.',
+      relatedFormats: ['dfxp', 'srt', 'vtt'],
+    },
+    sampleContent: `<?xml version="1.0" encoding="UTF-8"?>\n<tt xmlns="http://www.w3.org/ns/ttml">\n  <body>\n    <div>\n      <p begin="00:00:01.000" end="00:00:04.500">Пример субтитров W3C TTML.</p>\n      <p begin="00:00:05.000" end="00:00:08.500">Стриминговый телестандарт субтитров.</p>\n    </div>\n  </body>\n</tt>`,
+  },
+
+  // 2. DFXP (.dfxp) -> SRT, VTT, TXT, JSON, CSV
+  {
+    id: 'dfxp',
+    extension: '.dfxp',
+    name: 'Distribution Format Exchange Profile (DFXP)',
+    category: 'subtitles',
+    description: 'Профиль обмена субтитрами на базе W3C TTML, широко применяемый в Flash Media, Silverlight и стриминговых сервисах.',
+    usedFor: 'Стриминг, онлайн-кинотеатры, Adobe Premiere, медиаархивы',
+    targets: ['srt', 'vtt', 'txt', 'json', 'csv'],
+    mimeType: 'application/ttml+xml',
+    presets: [
+      { targetFormat: 'srt', label: 'DFXP ➔ SubRip (.srt)', description: 'Конвертация для плееров VLC и MPC', badge: 'Популярно' },
+      { targetFormat: 'vtt', label: 'DFXP ➔ WebVTT (.vtt)', description: 'Дорожка для браузерных тегов <video>', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'DFXP ➔ Текст (.txt)', description: 'Транскрипт речи без разметки', badge: 'Текст' },
+      { targetFormat: 'json', label: 'DFXP ➔ JSON (.json)', description: 'Структурированные тайминги', badge: 'JSON' },
+      { targetFormat: 'csv', label: 'DFXP ➔ CSV (.csv)', description: 'Таблица таймкодов для Excel', badge: 'Таблица' },
+    ],
+    details: {
+      developer: 'W3C / Adobe Flash Media',
+      standardOrType: 'DFXP TTML Profile',
+      mimeTypeDetailed: 'application/x-dfxp+xml',
+      keyFeatures: ['XML структура tt/body/div/p', 'Атрибуты begin/dur/end', 'Выравнивание по экранным координатам'],
+      syntaxTips: 'Формат полностью совместим с TTML.',
+      relatedFormats: ['ttml', 'srt', 'vtt'],
+    },
+    sampleContent: `<?xml version="1.0" encoding="utf-8"?>\n<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">\n  <body>\n    <div>\n      <p begin="00:00:01.200" dur="00:00:03.500">DFXP субтитры для видео</p>\n      <p begin="00:00:05.000" dur="00:00:04.000">Легко экспортируются в SRT и VTT</p>\n    </div>\n  </body>\n</tt>`,
+  },
+
+  // 3. SAMI (.smi) -> SRT, VTT, TXT, JSON, CSV
+  {
+    id: 'sami',
+    extension: '.smi',
+    name: 'SAMI Windows Media Subtitle (.smi, .sami)',
+    category: 'subtitles',
+    description: 'Формат субтитров Microsoft Synchronized Accessible Media Interchange с HTML-подобной разметкой <SYNC Start=...>.',
+    usedFor: 'Windows Media Player, классические корейские дорамы и азиатские медиаресурсы',
+    targets: ['srt', 'vtt', 'txt', 'json', 'csv'],
+    mimeType: 'application/x-sami',
+    presets: [
+      { targetFormat: 'srt', label: 'SAMI ➔ SubRip (.srt)', description: 'Перевод устаревшего SAMI в современный универсальный формат', badge: 'Рекомендуется' },
+      { targetFormat: 'vtt', label: 'SAMI ➔ WebVTT (.vtt)', description: 'Преобразование для онлайн-просмотра в браузере', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'SAMI ➔ Текст (.txt)', description: 'Текст диалогов без HTML-тегов', badge: 'Текст' },
+      { targetFormat: 'json', label: 'SAMI ➔ JSON (.json)', description: 'Массив реплик с миллисекундами', badge: 'JSON' },
+      { targetFormat: 'csv', label: 'SAMI ➔ CSV (.csv)', description: 'Табличный отчет таймкодов', badge: 'Excel' },
+    ],
+    details: {
+      developer: 'Microsoft Corporation',
+      standardOrType: 'HTML/XML разметка с блоками <SYNC Start=ms>',
+      mimeTypeDetailed: 'application/x-sami',
+      keyFeatures: ['Тайминг в миллисекундах', 'Языковые стили CSS (.ENCC, .KRCC)', 'Поддержка форматирования шрифтов'],
+      syntaxTips: 'Окончание субтитра вычисляется по началу следующего тега <SYNC>.',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `<SAMI>\n<BODY>\n<SYNC Start=1000><P Class=ENCC>Привет из Microsoft SAMI!</P>\n<SYNC Start=4500><P Class=ENCC>Вторая реплика с точным таймингом.</P>\n<SYNC Start=8000><P Class=ENCC>&nbsp;</P>\n</BODY>\n</SAMI>`,
+  },
+
+  // 4. SubStation Alpha (.ssa) -> SRT, VTT, ASS, TXT, JSON
+  {
+    id: 'ssa',
+    extension: '.ssa',
+    name: 'SubStation Alpha v4 (.ssa)',
+    category: 'subtitles',
+    description: 'Классический формат фансаб-субтитров SubStation Alpha v4, предшественник формата ASS.',
+    usedFor: 'Фансаб, аниме, классический видеомонтаж (VirtualDub, AviSynth)',
+    targets: ['srt', 'vtt', 'ass', 'txt', 'json'],
+    mimeType: 'text/x-ssa',
+    presets: [
+      { targetFormat: 'srt', label: 'SSA ➔ SubRip (.srt)', description: 'Очистка стилей для максимальной совместимости', badge: 'Стандарт' },
+      { targetFormat: 'vtt', label: 'SSA ➔ WebVTT (.vtt)', description: 'Публикация на сайтах в плеере HTML5', badge: 'Веб' },
+      { targetFormat: 'ass', label: 'SSA ➔ Advanced SSA (.ass)', description: 'Обновление до современного формата v4+', badge: 'Обновление' },
+      { targetFormat: 'txt', label: 'SSA ➔ Текст (.txt)', description: 'Чистые диалоги без параметров шрифтов', badge: 'Текст' },
+      { targetFormat: 'json', label: 'SSA ➔ JSON (.json)', description: 'Экспорт реплик в структурированный JSON', badge: 'Dev' },
+    ],
+    details: {
+      developer: 'Kotus / CS Software',
+      standardOrType: 'SubStation Alpha v4.00 Script',
+      mimeTypeDetailed: 'text/x-ssa',
+      keyFeatures: ['Секции [Script Info], [V4 Styles], [Events]', 'Диалоговые строки Dialogue: Marked=0,...', 'Таймкод Ч:ММ:СС.хх'],
+      syntaxTips: 'Отличается от ASS заголовком стилей [V4 Styles] вместо [V4+ Styles].',
+      relatedFormats: ['ass', 'srt'],
+    },
+    sampleContent: `[Script Info]\nTitle: SSA Demo\nScriptType: v4.00\n\n[Events]\nFormat: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: Marked=0,0:00:01.00,0:00:04.00,Default,,0000,0000,0000,,Субтитр SubStation Alpha v4\nDialogue: Marked=0,0:00:05.00,0:00:08.50,Default,,0000,0000,0000,,Вторая строчка субтитров`,
+  },
+
+  // 5. Spruce STL (.stl) -> SRT, VTT, TXT, CSV, JSON
+  {
+    id: 'spruce_stl',
+    extension: '.stl',
+    name: 'Spruce STL Subtitle (.stl)',
+    category: 'subtitles',
+    description: 'Текстовый формат разметки субтитров Spruce DVD Studio Pro для профессионального авторинга DVD и Blu-ray.',
+    usedFor: 'DVD Studio Pro, авторинг DVD/BD, телевещание, кинопроизводство',
+    targets: ['srt', 'vtt', 'txt', 'csv', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'Spruce STL ➔ SubRip (.srt)', description: 'Конвертация субтитров DVD в формат SRT', badge: 'DVD в SRT' },
+      { targetFormat: 'vtt', label: 'Spruce STL ➔ WebVTT (.vtt)', description: 'Использование в онлайн-кинотеатрах', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'Spruce STL ➔ Текст (.txt)', description: 'Извлечение текста диалогов', badge: 'Текст' },
+      { targetFormat: 'csv', label: 'Spruce STL ➔ CSV (.csv)', description: 'Таблица таймингов по кадрам', badge: 'Excel' },
+      { targetFormat: 'json', label: 'Spruce STL ➔ JSON (.json)', description: 'Парсинг таймкодов Spruce в JSON', badge: 'Dev' },
+    ],
+    details: {
+      developer: 'Spruce Technologies / Apple DVD Studio Pro',
+      standardOrType: 'Spruce DVD Subtitle Text Specification',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Таймкоды ЧЧ:ММ:СС:КК через запятую', 'Директивы шрифтов $FontName, $FontSize', 'Разделитель переноса строк |'],
+      syntaxTips: 'Строки начинаются с таймкода начала и окончания: 00:00:01:00 , 00:00:04:00 , Текст.',
+      relatedFormats: ['srt', 'scc'],
+    },
+    sampleContent: `$FontName = Arial\n$FontSize = 32\n00:00:01:00 , 00:00:04:00 , Первая строка Spruce STL|Вторая строка\n00:00:05:00 , 00:00:08:15 , Продолжение диалога на диске DVD`,
+  },
+
+  // 6. Scenarist Closed Caption (.scc) -> SRT, VTT, TXT, JSON
+  {
+    id: 'scc',
+    extension: '.scc',
+    name: 'Scenarist Closed Caption (.scc)',
+    category: 'subtitles',
+    description: 'Отраслевой американский вещательный стандарт скрытых субтитров EIA-608 / CEA-708 для телевидения и NTSC DVD.',
+    usedFor: 'Американское телевидение (FCC Line 21), iTunes, Amazon Prime Video, телевещание',
+    targets: ['srt', 'vtt', 'txt', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'SCC ➔ SubRip (.srt)', description: 'Декодирование шестнадцатеричных скрытых субтитров в SRT', badge: 'ТВ в SRT' },
+      { targetFormat: 'vtt', label: 'SCC ➔ WebVTT (.vtt)', description: 'Подготовка к показу в онлайн-трансляциях', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'SCC ➔ Текст (.txt)', description: 'Стенограмма ТВ-программы', badge: 'Текст' },
+      { targetFormat: 'json', label: 'SCC ➔ JSON (.json)', description: 'Экспорт таймкодов в JSON', badge: 'Dev' },
+    ],
+    details: {
+      developer: 'Sonic Solutions / Scenarist',
+      standardOrType: 'Scenarist SCC v1.0 (EIA-608)',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Заголовок Scenarist_SCC V1.0', 'Таймкод drop-frame ЧЧ:ММ:СС;КК', '16-битные hex-пары байтов символов'],
+      syntaxTips: 'Декодирует пары байтов ASCII из hex-кода вещательного стандарта.',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `Scenarist_SCC V1.0\n\n01:00:01;00\t9420 9420 947a 947a 4865 6c6c 6f20 576f 726c 6421 942c 942c\n\n01:00:05;15\t9420 9420 947a 947a 436c 6f73 6564 2043 6170 7469 6f6e 7321 942c 942c`,
+  },
+
+  // 7. QuickTime Text (.qt.txt / .txt) -> SRT, VTT, TXT, JSON
+  {
+    id: 'qt_txt',
+    extension: '.txt',
+    name: 'QuickTime Text Subtitle (.qt.txt / .txt)',
+    category: 'subtitles',
+    description: 'Формат текстовых дорожек субтитров мультимедийного плеера Apple QuickTime ({QTtext}).',
+    usedFor: 'Apple QuickTime, Final Cut Pro, монтаж на macOS, видеоархивы MOV',
+    targets: ['srt', 'vtt', 'txt', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'QuickTime ➔ SubRip (.srt)', description: 'Преобразование для любого медиаплеера', badge: 'Apple в SRT' },
+      { targetFormat: 'vtt', label: 'QuickTime ➔ WebVTT (.vtt)', description: 'Субтитры для веба и мобильных устройств', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'QuickTime ➔ Текст (.txt)', description: 'Извлечение текста без дескрипторов QT', badge: 'Текст' },
+      { targetFormat: 'json', label: 'QuickTime ➔ JSON (.json)', description: 'Тайминги в JSON', badge: 'JSON' },
+    ],
+    details: {
+      developer: 'Apple Inc.',
+      standardOrType: 'QuickTime Text Track Specification',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Директивы шрифта {QTtext} {font:Helvetica}', 'Временные отметки [ЧЧ:ММ:СС.хх]', 'Построчный текст субтитров'],
+      syntaxTips: 'Временные метки заключаются в квадратные скобки: [00:00:01.00].',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `{QTtext} {font:Helvetica} {size:12}\n[00:00:01.00]\nПривет из QuickTime Text!\n[00:00:04.50]\nВторая строчка субтитра Apple.\n[00:00:08.00]`,
+  },
+
+  // 8. Avid DS Subtitle (.txt) -> SRT, VTT, CSV, JSON
+  {
+    id: 'avid_ds',
+    extension: '.txt',
+    name: 'Avid DS Subtitle (.txt)',
+    category: 'subtitles',
+    description: 'Формат субтитров профессиональной монтажной системы Avid Media Composer и Avid DS.',
+    usedFor: 'Avid Media Composer, киномонтаж, постпродакшн, телевещание',
+    targets: ['srt', 'vtt', 'csv', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'Avid DS ➔ SubRip (.srt)', description: 'Экспорт субтитров из Avid для предпросмотра', badge: 'Avid в SRT' },
+      { targetFormat: 'vtt', label: 'Avid DS ➔ WebVTT (.vtt)', description: 'Дорожка для веб-публикации монтажа', badge: 'Веб' },
+      { targetFormat: 'csv', label: 'Avid DS ➔ CSV (.csv)', description: 'Монтажный лист с таймкодами для монтажеров', badge: 'Excel' },
+      { targetFormat: 'json', label: 'Avid DS ➔ JSON (.json)', description: 'Синхронизация с базой данных проекта', badge: 'JSON' },
+    ],
+    details: {
+      developer: 'Avid Technology',
+      standardOrType: 'Avid DS Subtitle Exchange',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Служебный маркер <begin subtitles>', 'Пары таймкодов начала и конца через пробел', 'Поддержка кадровой частоты 24, 25, 29.97'],
+      syntaxTips: 'Таймкод начала и конца записывается в одной строке: 01:00:01:00 01:00:04:12.',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `@ This is an Avid DS subtitle file\n<begin subtitles>\n01:00:01:00 01:00:04:00\nСубтитры из Avid Media Composer\n\n01:00:05:00 01:00:08:12\nПрофессиональный постпродакшн монтажа\n<end subtitles>`,
+  },
+
+  // 9. Cheetah CAP (.cap) -> SRT, VTT, TXT
+  {
+    id: 'cheetah_cap',
+    extension: '.cap',
+    name: 'Cheetah CAP Caption (.cap)',
+    category: 'subtitles',
+    description: 'Формат скрытых и открытых субтитров систем Cheetah Systems CAP, применяемый на телевидении.',
+    usedFor: 'Студии закрытого субтитрования, ТВ вещание, архивы субтитров',
+    targets: ['srt', 'vtt', 'txt'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'Cheetah CAP ➔ SubRip (.srt)', description: 'Преобразование в общепринятый стандарт SRT', badge: 'Конвертация' },
+      { targetFormat: 'vtt', label: 'Cheetah CAP ➔ WebVTT (.vtt)', description: 'Веб-субтитры HTML5', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'Cheetah CAP ➔ Текст (.txt)', description: 'Чистый текст стенограммы', badge: 'Текст' },
+    ],
+    details: {
+      developer: 'Cheetah Systems',
+      standardOrType: 'Cheetah Caption ASCII Export',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Таймкоды телевещания', 'Текстовые блоки субтитров', 'Простота извлечения'],
+      syntaxTips: 'Строки начинаются с таймкода ЧЧ:ММ:СС:КК.',
+      relatedFormats: ['srt', 'scc'],
+    },
+    sampleContent: `01:00:01:00 Cheetah caption line one\n01:00:05:00 Cheetah caption second phrase\n01:00:09:00 Converted directly in browser`,
+  },
+
+  // 10. EBU-STL (.stl) -> SRT, VTT, TXT, JSON
+  {
+    id: 'ebu_stl',
+    extension: '.stl',
+    name: 'EBU-STL Subtitle Text (.stl)',
+    category: 'subtitles',
+    description: 'Европейский телевещательный стандарт субтитров EBU Tech 3264 Европейского вещательного союза.',
+    usedFor: 'Европейские телеканалы, Eurovision, архивы субтитров Teletext',
+    targets: ['srt', 'vtt', 'txt', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'EBU-STL ➔ SubRip (.srt)', description: 'Перевод телетекстовых субтитров в SRT', badge: 'EBU в SRT' },
+      { targetFormat: 'vtt', label: 'EBU-STL ➔ WebVTT (.vtt)', description: 'Для европейских онлайн-вещателей', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'EBU-STL ➔ Текст (.txt)', description: 'Текст телепередачи', badge: 'Текст' },
+      { targetFormat: 'json', label: 'EBU-STL ➔ JSON (.json)', description: 'Экспорт таймкодов', badge: 'JSON' },
+    ],
+    details: {
+      developer: 'European Broadcasting Union (EBU)',
+      standardOrType: 'EBU Tech 3264 Specification',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Таймкоды формата ЧЧ:ММ:СС:КК', 'Телетекстовые блоки', 'Широкая поддержка в европейском телеэфире'],
+      syntaxTips: 'Для различия с 3D-моделями STL наш конвертер определяет наличие таймкодов.',
+      relatedFormats: ['spruce_stl', 'srt'],
+    },
+    sampleContent: `00:00:01:00 , 00:00:04:00 , EBU Subtitle Text Line\n00:00:05:00 , 00:00:08:12 , European Broadcasting Union standard`,
+  },
+
+  // 11. YouTube Subtitles (.sbv) -> SRT, VTT, TXT, CSV, JSON
+  {
+    id: 'sbv',
+    extension: '.sbv',
+    name: 'YouTube Subtitles (SBV)',
+    category: 'subtitles',
+    description: 'Внутренний текстовый формат субтитров Творческой студии YouTube с таймингом 0:00:01.000,0:00:04.000.',
+    usedFor: 'Творческая студия YouTube, экспорт и импорт дорожек видеороликов',
+    targets: ['srt', 'vtt', 'txt', 'csv', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'SBV ➔ SubRip (.srt)', description: 'Использование в Premiere, DaVinci и Final Cut', badge: 'Монтаж' },
+      { targetFormat: 'vtt', label: 'SBV ➔ WebVTT (.vtt)', description: 'Публикация на собственном сайте', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'SBV ➔ Текст (.txt)', description: 'Транскрипт видеоролика для статьи', badge: 'Статья' },
+      { targetFormat: 'csv', label: 'SBV ➔ CSV (.csv)', description: 'Таблица реплик YouTube', badge: 'Excel' },
+      { targetFormat: 'json', label: 'SBV ➔ JSON (.json)', description: 'Массив таймкодов для разработчиков', badge: 'JSON' },
+    ],
+    details: {
+      developer: 'Google / YouTube',
+      standardOrType: 'YouTube Studio Subtitle',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Таймкод вида 0:00:01.000,0:00:04.000', 'Отсутствие номеров реплик', 'Простота синтаксиса'],
+      syntaxTips: 'Время начала и конца разделяется запятой в первой строке каждого блока.',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `0:00:01.000,0:00:04.000\nПривет! Это субтитры из YouTube Studio.\n\n0:00:05.100,0:00:08.500\nЛегко конвертируются в SRT, VTT и текстовый транскрипт.`,
+  },
+
+  // 12. Lyrics Karaoke (.lrc) -> SRT, VTT, TXT, JSON
+  {
+    id: 'lrc',
+    extension: '.lrc',
+    name: 'Lyrics Karaoke (LRC)',
+    category: 'subtitles',
+    description: 'Синхронизированные слова песен с миллисекундными таймкодами [мм:сс.хх] для аудиоплееров и караоке.',
+    usedFor: 'Плееры AIMP, Poweramp, Foobar2000, караоке-системы, синхронизация стихов треков',
+    targets: ['srt', 'vtt', 'txt', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'LRC ➔ SubRip (.srt)', description: 'Синхронизация текста песни с музыкальным клипом', badge: 'Клипы' },
+      { targetFormat: 'vtt', label: 'LRC ➔ WebVTT (.vtt)', description: 'Интерактивный плеер слов трека на сайте', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'LRC ➔ Текст песни (.txt)', description: 'Стихи песни без таймингов для печати', badge: 'Текст' },
+      { targetFormat: 'json', label: 'LRC ➔ JSON (.json)', description: 'Парсинг караоке для веб-приложений', badge: 'JSON' },
+    ],
+    details: {
+      developer: 'Kuo / Winamp Community',
+      standardOrType: 'LRC Format Specification',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Маркер времени [мм:сс.хх]', 'Теги исполнителя [ar:], альбома [al:]', 'Построчная синхронизация'],
+      syntaxTips: 'Таймкод указывается в начале каждой строки песни.',
+      relatedFormats: ['cue', 'srt'],
+    },
+    sampleContent: `[00:01.50]Первая строчка любимой песни\n[00:04.20]Вторая строчка куплета с таймингом\n[00:08.00]Припев начинается прямо здесь`,
+  },
+
+  // 13. Timed Text XML (.xml) -> SRT, VTT, JSON, CSV
+  {
+    id: 'timedtext_xml',
+    extension: '.xml',
+    name: 'Timed Text XML / YouTube Transcript (.xml)',
+    category: 'subtitles',
+    description: 'XML-выгрузка стенограмм и автоматических субтитров с тегами <text start="..." dur="...">.',
+    usedFor: 'Парсинг транскриптов YouTube, субтитры Adobe Flash, XML-вещание',
+    targets: ['srt', 'vtt', 'json', 'csv'],
+    mimeType: 'application/xml',
+    presets: [
+      { targetFormat: 'srt', label: 'XML ➔ SubRip (.srt)', description: 'Преобразование транскрипта в субтитры SRT', badge: 'Универсально' },
+      { targetFormat: 'vtt', label: 'XML ➔ WebVTT (.vtt)', description: 'Онлайн-плееры и HTML5', badge: 'Веб' },
+      { targetFormat: 'json', label: 'XML ➔ JSON (.json)', description: 'Массив фраз с длительностью', badge: 'JSON' },
+      { targetFormat: 'csv', label: 'XML ➔ CSV (.csv)', description: 'Таблица реплик для анализа', badge: 'Excel' },
+    ],
+    details: {
+      developer: 'Google / YouTube API',
+      standardOrType: 'Transcript XML Schema',
+      mimeTypeDetailed: 'application/xml',
+      keyFeatures: ['Атрибуты start и dur в секундах', 'HTML-сущности декодируются автоматически', 'Легкость парсинга'],
+      syntaxTips: 'Пример узла: <text start="1.5" dur="3.0">Текст реплики</text>.',
+      relatedFormats: ['ttml', 'sbv'],
+    },
+    sampleContent: `<?xml version="1.0" encoding="utf-8"?>\n<transcript>\n  <text start="1.200" dur="3.500">Автоматический транскрипт видеоролика</text>\n  <text start="5.000" dur="4.200">Легко преобразуется в стандартный файл субтитров</text>\n</transcript>`,
+  },
+
+  // 14. SubViewer 1.0 (.sub) -> SRT, VTT, TXT
+  {
+    id: 'subviewer1',
+    extension: '.sub',
+    name: 'SubViewer 1.0 (.sub)',
+    category: 'subtitles',
+    description: 'Классический формат субтитров SubViewer 1.0 с временными метками вида [ЧЧ:ММ:СС].',
+    usedFor: 'Классические медиаплееры, DivX эпоха, архивы субтитров',
+    targets: ['srt', 'vtt', 'txt'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'SubViewer 1.0 ➔ SubRip (.srt)', description: 'Конвертация в стандарт SRT', badge: 'SRT' },
+      { targetFormat: 'vtt', label: 'SubViewer 1.0 ➔ WebVTT (.vtt)', description: 'Для онлайн-видео', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'SubViewer 1.0 ➔ Текст (.txt)', description: 'Чистые реплики', badge: 'Текст' },
+    ],
+    details: {
+      developer: 'SubViewer Software',
+      standardOrType: 'SubViewer 1.0 Format',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Таймкод в квадратных скобках [ЧЧ:ММ:СС]', 'Текст на следующей строке', 'Простой текстовый синтаксис'],
+      syntaxTips: 'Окончание вычисляется по следующей метке.',
+      relatedFormats: ['subviewer2', 'microdvd'],
+    },
+    sampleContent: `[00:00:01]\nПервая реплика SubViewer 1.0\n\n[00:00:05]\nВторая фраза диалога\n\n[00:00:09]`,
+  },
+
+  // 15. SubViewer 2.0 (.sub) -> SRT, VTT, TXT, CSV
+  {
+    id: 'subviewer2',
+    extension: '.sub',
+    name: 'SubViewer 2.0 (.sub)',
+    category: 'subtitles',
+    description: 'Улучшенный формат SubViewer 2.0 с явным указанием времени начала и конца через запятую и тегами [br].',
+    usedFor: 'DivX, XviD рипы, субтитры к фильмам, медиаплееры',
+    targets: ['srt', 'vtt', 'txt', 'csv'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'SubViewer 2.0 ➔ SubRip (.srt)', description: 'Современный универсальный формат', badge: 'Рекомендуется' },
+      { targetFormat: 'vtt', label: 'SubViewer 2.0 ➔ WebVTT (.vtt)', description: 'HTML5 веб-плееры', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'SubViewer 2.0 ➔ Текст (.txt)', description: 'Текст без разметки', badge: 'Текст' },
+      { targetFormat: 'csv', label: 'SubViewer 2.0 ➔ CSV (.csv)', description: 'Табличный экспорт', badge: 'Excel' },
+    ],
+    details: {
+      developer: 'SubViewer Team',
+      standardOrType: 'SubViewer 2.0 Specification',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Таймкод ЧЧ:ММ:СС.хх,ЧЧ:ММ:СС.хх', 'Теги переноса строк [br]', 'Секция метаданных [INFORMATION]'],
+      syntaxTips: 'Наш конвертер корректно заменяет [br] на стандартные переносы строк.',
+      relatedFormats: ['subviewer1', 'srt'],
+    },
+    sampleContent: `[INFORMATION]\n[TITLE]Пример субтитров\n[AUTHOR]Конвертер\n\n00:00:01.20,00:00:04.50\nПервая строка SubViewer 2.0[br]Вторая строка реплики\n\n00:00:05.10,00:00:08.80\nПродолжение разговора персонажей`,
+  },
+
+  // 16. MicroDVD (.sub) -> SRT, VTT, TXT, JSON
+  {
+    id: 'microdvd',
+    extension: '.sub',
+    name: 'MicroDVD (.sub)',
+    category: 'subtitles',
+    description: 'Популярный формат субтитров на основе номеров кадров вида {старт}{конец}Текст реплики|Вторая строка.',
+    usedFor: 'MicroDVD Player, старые DVD-рипы, видеоплееры с поддержкой кадров',
+    targets: ['srt', 'vtt', 'txt', 'json'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'MicroDVD ➔ SubRip (.srt)', description: 'Пересчет номеров кадров в миллисекунды и SRT', badge: 'Кадры в SRT' },
+      { targetFormat: 'vtt', label: 'MicroDVD ➔ WebVTT (.vtt)', description: 'Для онлайн-видео', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'MicroDVD ➔ Текст (.txt)', description: 'Чистый диалог без номеров кадров', badge: 'Текст' },
+      { targetFormat: 'json', label: 'MicroDVD ➔ JSON (.json)', description: 'Экспорт временных меток в JSON', badge: 'JSON' },
+    ],
+    details: {
+      developer: 'MicroDVD Team',
+      standardOrType: 'Frame-based Subtitle Format',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Номера кадров в фигурных скобках {100}{250}', 'Автоопределение FPS из строки {1}{1}25.000', 'Разделитель строк |'],
+      syntaxTips: 'При конвертации кадры переводятся в секунды с точностью до миллисекунды.',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `{1}{1}25.000\n{25}{100}Привет из формата MicroDVD!\n{120}{220}Первая строка|Вторая строка реплики\n{250}{350}Конвертация кадров в таймкоды SRT`,
+  },
+
+  // 17. MPSub (.sub) -> SRT, VTT, TXT
+  {
+    id: 'mpsub',
+    extension: '.sub',
+    name: 'MPlayer Subtitle (MPSub)',
+    category: 'subtitles',
+    description: 'Специализированный формат субтитров плеера MPlayer на основе относительных пауз и длительностей.',
+    usedFor: 'MPlayer, MPV, Linux медиаплееры, субтитры к фильмам',
+    targets: ['srt', 'vtt', 'txt'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'MPSub ➔ SubRip (.srt)', description: 'Перевод относительных задержек в абсолютные таймкоды SRT', badge: 'MPSub в SRT' },
+      { targetFormat: 'vtt', label: 'MPSub ➔ WebVTT (.vtt)', description: 'Для HTML5 веб-видео', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'MPSub ➔ Текст (.txt)', description: 'Чистые реплики диалогов', badge: 'Текст' },
+    ],
+    details: {
+      developer: 'MPlayer Development Team',
+      standardOrType: 'Relative Time/Frame Subtitle',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Заголовок FORMAT=TIME или FORMAT=25', 'Пары чисел: пауза и длительность в секундах', 'Вычисление абсолютных меток'],
+      syntaxTips: 'Каждая реплика содержит паузу от предыдущей и продолжительность показа.',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `FORMAT=TIME\n# MPlayer subtitle file\n\n1.0 3.5\nПервая фраза MPSub субтитров\n\n1.2 4.0\nВторая фраза с относительной задержкой`,
+  },
+
+  // 18. RealText (.rt) -> SRT, VTT, TXT
+  {
+    id: 'realtext',
+    extension: '.rt',
+    name: 'RealNetworks RealText (.rt)',
+    category: 'subtitles',
+    description: 'Потоковый формат субтитров RealNetworks RealPlayer с тегами <time begin="..."/>.',
+    usedFor: 'RealPlayer, RealMedia потоковое видео RM/RMVB, медиаархивы',
+    targets: ['srt', 'vtt', 'txt'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'srt', label: 'RealText ➔ SubRip (.srt)', description: 'Перевод субтитров RealPlayer в SRT', badge: 'RealText в SRT' },
+      { targetFormat: 'vtt', label: 'RealText ➔ WebVTT (.vtt)', description: 'Для браузерных видеоплееров', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'RealText ➔ Текст (.txt)', description: 'Извлечение текста речи', badge: 'Текст' },
+    ],
+    details: {
+      developer: 'RealNetworks',
+      standardOrType: 'RealText Streaming Markup',
+      mimeTypeDetailed: 'text/vnd.rn-realtext',
+      keyFeatures: ['Теги <window> и <time begin="...">', 'Тег очистки экрана <clear/>', 'Форматирование шрифтов SMIL'],
+      syntaxTips: 'Широко использовался в потоковом вещании 2000-х годов.',
+      relatedFormats: ['srt', 'vtt'],
+    },
+    sampleContent: `<window type="generic">\n<time begin="00:00:01.0"/><clear/>Субтитры RealNetworks RealText\n<time begin="00:00:05.0"/><clear/>Вторая строчка трансляции\n<time begin="00:00:09.0"/><clear/>`,
+  },
+
+  // 19. WebVTT (.vtt) -> HTML (интерактивный скрипт), TXT, JSON, CSV, TSV, SRT, ASS
+  {
+    id: 'vtt',
+    extension: '.vtt',
+    name: 'WebVTT (VTT)',
+    category: 'subtitles',
+    description: 'Веб-стандарт субтитров консорциума W3C для тега HTML5 <video> и онлайн-плееров.',
+    usedFor: 'HTML5 веб-плееры, онлайн-кинотеатры, курсы, стриминг',
+    targets: ['html', 'txt', 'json', 'csv', 'tsv', 'srt', 'ass'],
+    mimeType: 'text/vtt',
+    presets: [
+      { targetFormat: 'html', label: 'VTT ➔ Интерактивный HTML-скрипт (.html)', description: 'Автономный интерактивный транскрипт с поиском и кликабельными таймингами', badge: 'Интерактивно' },
+      { targetFormat: 'srt', label: 'VTT ➔ SubRip (.srt)', description: 'Преобразование для стандартных настольных видеоплееров', badge: 'Универсально' },
+      { targetFormat: 'txt', label: 'VTT ➔ Чистый текст (.txt)', description: 'Транскрипт видеоурока или лекции', badge: 'Текст' },
+      { targetFormat: 'json', label: 'VTT ➔ JSON (.json)', description: 'Парсинг дорожек для веб-приложений', badge: 'Dev' },
+      { targetFormat: 'csv', label: 'VTT ➔ Таблица CSV (.csv)', description: 'Экспорт таймкодов в Excel', badge: 'Excel' },
+      { targetFormat: 'tsv', label: 'VTT ➔ Разделители табуляции TSV (.tsv)', description: 'Тайминги через Tab для аудиомонтажа', badge: 'TSV' },
+      { targetFormat: 'ass', label: 'VTT ➔ ASS/SSA (.ass)', description: 'Добавление возможностей стилизации и анимации', badge: 'Стили' },
+    ],
+    details: {
+      developer: 'W3C Web Incubator Community Group',
+      standardOrType: 'W3C Candidate Recommendation',
+      mimeTypeDetailed: 'text/vtt',
+      keyFeatures: ['Обязательная строка WEBVTT в начале', 'Разделитель миллисекунд — точка', 'Поддержка стилей CSS ::cue'],
+      syntaxTips: 'В WebVTT миллисекунды отделяются точкой (00:00:01.500), в отличие от SRT.',
+      relatedFormats: ['srt', 'ttml', 'ass'],
+    },
+    sampleContent: `WEBVTT\n\n1\n00:00:01.000 --> 00:00:04.500\nПример веб-субтитра WebVTT.\n\n2\n00:00:05.000 --> 00:00:09.000\nПоддерживается всеми современными браузерами.`,
+  },
+
+  // 20. SubRip (.srt) -> HTML, TXT, JSON, CSV, TSV, Markdown Table, VTT, ASS
+  {
+    id: 'srt',
+    extension: '.srt',
+    name: 'SubRip Subtitle (SRT)',
+    category: 'subtitles',
+    description: 'Самый распространенный в мире формат субтитров для фильмов, сериалов и медиаплееров VLC/MPC.',
+    usedFor: 'Фильмы, сериалы, YouTube, видеомонтаж (Premiere, DaVinci, Final Cut)',
+    targets: ['html', 'txt', 'json', 'csv', 'tsv', 'md', 'vtt', 'ass'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'html', label: 'SRT ➔ Интерактивный HTML-скрипт (.html)', description: 'Автономная веб-страница с кликабельными фразами и поиском', badge: 'Интерактивно' },
+      { targetFormat: 'vtt', label: 'SRT ➔ WebVTT (.vtt)', description: 'Стандарт субтитров HTML5 для веб-сайтов', badge: 'Веб' },
+      { targetFormat: 'txt', label: 'SRT ➔ Чистый текст (.txt)', description: 'Извлечение речи без таймкодов', badge: 'Текст' },
+      { targetFormat: 'csv', label: 'SRT ➔ Таблица CSV (.csv)', description: 'Таблица реплик и длительностей для Excel', badge: 'Excel' },
+      { targetFormat: 'tsv', label: 'SRT ➔ Табуляция TSV (.tsv)', description: 'Табличный экспорт для лингвистов', badge: 'TSV' },
+      { targetFormat: 'md', label: 'SRT ➔ Markdown Table (.md)', description: 'Таблица таймингов для GitHub / Notion', badge: 'Markdown' },
+      { targetFormat: 'json', label: 'SRT ➔ Массив JSON (.json)', description: 'Таймкоды и реплики в формате JSON', badge: 'JSON' },
+      { targetFormat: 'ass', label: 'SRT ➔ Advanced SSA (.ass)', description: 'Стилизованные субтитры для аниме и караоке', badge: 'Стили' },
+    ],
+    details: {
+      developer: 'SubRip Community',
+      standardOrType: 'Построчный текстовый таймкод (ЧЧ:ММ:СС,МММ)',
+      mimeTypeDetailed: 'text/plain / application/x-subrip',
+      keyFeatures: ['Нумерация реплик целыми числами', 'Тайминги через стрелку --> с запятой', 'Широкая поддержка всеми плеерами'],
+      syntaxTips: 'Убедитесь, что между репликами есть пустая строка, а разделитель миллисекунд — запятая.',
+      relatedFormats: ['vtt', 'ass', 'sbv', 'lrc'],
+    },
+    sampleContent: `1\n00:00:01,000 --> 00:00:04,500\nПривет! Это пример субтитров SubRip.\n\n2\n00:00:05,000 --> 00:00:08,200\nКонвертация происходит на 100% в вашем браузере!`,
+  },
+
+  // =========================================================================
+  // 2. ДАННЫЕ И ТАБЛИЦЫ (7 форматов: 21-27)
+  // =========================================================================
+
+  // 21. CSV (.csv) -> JSON, YAML, XML, Markdown Table, SQL INSERT
+  {
+    id: 'csv',
+    extension: '.csv',
+    name: 'Comma-Separated Values (CSV)',
+    category: 'data',
+    description: 'Универсальный табличный текстовый формат с разделителями-запятыми, поддерживаемый Excel, базами данных и Python.',
+    usedFor: 'Электронные таблицы Excel, экспорт баз данных, Data Science, аналитика',
+    targets: ['json', 'yaml', 'xml', 'md', 'sql'],
+    mimeType: 'text/csv',
+    presets: [
+      { targetFormat: 'json', label: 'CSV ➔ JSON (.json)', description: 'Преобразование строк в массив объектов JSON', badge: 'JSON' },
+      { targetFormat: 'yaml', label: 'CSV ➔ YAML (.yaml)', description: 'Удобная древовидная структура конфигураций', badge: 'YAML' },
+      { targetFormat: 'xml', label: 'CSV ➔ XML (.xml)', description: 'Иерархический XML документ со строками', badge: 'XML' },
+      { targetFormat: 'md', label: 'CSV ➔ Markdown Таблица (.md)', description: 'Форматированная таблица для документации и GitHub', badge: 'Markdown' },
+      { targetFormat: 'sql', label: 'CSV ➔ SQL INSERT (.sql)', description: 'Готовые SQL команды вставки строк в базу данных', badge: 'SQL' },
+    ],
+    details: {
+      developer: 'IETF RFC 4180',
+      standardOrType: 'RFC 4180 Delimited Text',
+      mimeTypeDetailed: 'text/csv',
+      keyFeatures: ['Первая строка — заголовки столбцов', 'Экранирование кавычек двойными кавычками ""', 'Простота парсинга'],
+      syntaxTips: 'Поля с запятыми или переносами строк обязательно оборачиваются в кавычки.',
+      relatedFormats: ['tsv', 'json', 'sql'],
+    },
+    sampleContent: `id,name,role,salary\n1,Иван Иванов,Инженер,120000\n2,Елена Смирнова,Аналитик,115000\n3,Алексей Петров,Дизайнер,95000`,
+  },
+
+  // 22. TSV (.tsv) -> CSV, JSON, Markdown Table, YAML, XML
+  {
+    id: 'tsv',
+    extension: '.tsv',
+    name: 'Tab-Separated Values (TSV)',
+    category: 'data',
+    description: 'Табличный формат с разделителями-табуляциями (Tab), идеален для вставки в Excel без конфликтов с запятыми.',
+    usedFor: 'Буфер обмена Excel/Google Sheets, биоинформатика, логирование',
+    targets: ['csv', 'json', 'md', 'yaml', 'xml'],
+    mimeType: 'text/tab-separated-values',
+    presets: [
+      { targetFormat: 'csv', label: 'TSV ➔ CSV (.csv)', description: 'Стандартный CSV с запятыми для импорта', badge: 'CSV' },
+      { targetFormat: 'json', label: 'TSV ➔ JSON (.json)', description: 'Массив объектов с именами столбцов', badge: 'JSON' },
+      { targetFormat: 'md', label: 'TSV ➔ Markdown Таблица (.md)', description: 'Таблица Markdown для документации', badge: 'Markdown' },
+      { targetFormat: 'yaml', label: 'TSV ➔ YAML (.yaml)', description: 'Конфигурация параметров', badge: 'YAML' },
+      { targetFormat: 'xml', label: 'TSV ➔ XML (.xml)', description: 'XML-документ', badge: 'XML' },
+    ],
+    details: {
+      developer: 'IANA / IETF',
+      standardOrType: 'Tab-Delimited ASCII Text',
+      mimeTypeDetailed: 'text/tab-separated-values',
+      keyFeatures: ['Символ табуляции \\t в качестве разделителя', 'Отсутствие конфликтов с запятыми в тексте', 'Копирование напрямую из Google Sheets'],
+      syntaxTips: 'Столбцы разделены строгим знаком табуляции.',
+      relatedFormats: ['csv', 'json'],
+    },
+    sampleContent: `code\tcity\tpopulation\nMOW\tМосква\t13100000\nLED\tСанкт-Петербург\t5600000\nNSK\tНовосибирск\t1630000`,
+  },
+
+  // 23. JSON (.json) -> CSV, TSV, YAML, XML, Markdown Table
+  {
+    id: 'json',
+    extension: '.json',
+    name: 'JavaScript Object Notation (JSON)',
+    category: 'data',
+    description: 'Главный веб-формат обмена структурированными данными между браузером и сервером.',
+    usedFor: 'REST API, базы данных NoSQL (MongoDB), конфигурации, веб-приложения',
+    targets: ['csv', 'tsv', 'yaml', 'xml', 'md'],
+    mimeType: 'application/json',
+    presets: [
+      { targetFormat: 'csv', label: 'JSON ➔ Таблица CSV (.csv)', description: 'Плоская таблица для открытия в Excel', badge: 'Excel' },
+      { targetFormat: 'tsv', label: 'JSON ➔ Табуляция TSV (.tsv)', description: 'Разделители-табуляции для вставки в таблицы', badge: 'TSV' },
+      { targetFormat: 'yaml', label: 'JSON ➔ YAML (.yaml)', description: 'Читаемый вид без лишних кавычек и скобок', badge: 'YAML' },
+      { targetFormat: 'xml', label: 'JSON ➔ XML (.xml)', description: 'Иерархический XML-документ', badge: 'XML' },
+      { targetFormat: 'md', label: 'JSON ➔ Markdown Таблица (.md)', description: 'Таблица для README.md', badge: 'Markdown' },
+    ],
+    details: {
+      developer: 'Douglas Crockford / ECMA-404',
+      standardOrType: 'RFC 8259 Data Interchange Format',
+      mimeTypeDetailed: 'application/json',
+      keyFeatures: ['Типы данных: строки, числа, объекты, массивы, булевы', 'Поддержка вложенности', 'Универсальный стандарт веб-разработки'],
+      syntaxTips: 'Строки и ключи обязательно оборачиваются в двойные кавычки.',
+      relatedFormats: ['yaml', 'csv', 'xml'],
+    },
+    sampleContent: `[\n  { "id": 1, "title": "Утренний митап", "time": "10:00", "status": "Завершено" },\n  { "id": 2, "title": "Код-ревью", "time": "14:30", "status": "В процессе" },\n  { "id": 3, "title": "Релиз версии 2.0", "time": "18:00", "status": "Запланировано" }\n]`,
+  },
+
+  // 24. YAML (.yaml, .yml) -> JSON, XML, CSV
+  {
+    id: 'yaml',
+    extension: '.yaml',
+    name: 'YAML Ain\'t Markup Language (YAML)',
+    category: 'data',
+    description: 'Человекочитаемый формат сериализации данных, стандарт конфигурации Docker, Kubernetes, CI/CD и Ansible.',
+    usedFor: 'Kubernetes, Docker Compose, GitHub Actions, Ansible, настройки проектов',
+    targets: ['json', 'xml', 'csv'],
+    mimeType: 'application/x-yaml',
+    presets: [
+      { targetFormat: 'json', label: 'YAML ➔ JSON (.json)', description: 'Преобразование конфигурации для скриптов и API', badge: 'JSON' },
+      { targetFormat: 'xml', label: 'YAML ➔ XML (.xml)', description: 'Перевод иерархии параметров в XML', badge: 'XML' },
+      { targetFormat: 'csv', label: 'YAML ➔ CSV (.csv)', description: 'Выгрузка списков YAML в таблицу Excel', badge: 'Excel' },
+    ],
+    details: {
+      developer: 'Clark Evans, Ingy döt Net, Oren Ben-Kiki',
+      standardOrType: 'YAML Specification v1.2',
+      mimeTypeDetailed: 'text/yaml / application/x-yaml',
+      keyFeatures: ['Иерархия задается отступами-пробелами', 'Отсутствие громоздких скобок', 'Поддержка комментариев через #'],
+      syntaxTips: 'Используйте строго пробелы для отступов, а не знаки табуляции.',
+      relatedFormats: ['json', 'xml'],
+    },
+    sampleContent: `app:\n  name: DataConverter\n  version: "2.4.0"\n  database:\n    host: localhost\n    port: 5432\n    ssl: true\nfeatures:\n  - subtitles\n  - tables\n  - vectors`,
+  },
+
+  // 25. XML (.xml) -> JSON, CSV, YAML
+  {
+    id: 'xml',
+    extension: '.xml',
+    name: 'Extensible Markup Language (XML)',
+    category: 'data',
+    description: 'Расширяемый язык разметки W3C для хранения и транспортировки структурированных документов.',
+    usedFor: 'Корпоративные интеграции (1С, SOAP, банки), стандарты W3C, Android манифесты',
+    targets: ['json', 'csv', 'yaml'],
+    mimeType: 'application/xml',
+    presets: [
+      { targetFormat: 'json', label: 'XML ➔ JSON (.json)', description: 'Современный JSON массив из узлов XML', badge: 'JSON' },
+      { targetFormat: 'csv', label: 'XML ➔ Таблица CSV (.csv)', description: 'Экспорт тегов в строки и колонки Excel', badge: 'Excel' },
+      { targetFormat: 'yaml', label: 'XML ➔ YAML (.yaml)', description: 'Компактная конфигурация без закрывающих тегов', badge: 'YAML' },
+    ],
+    details: {
+      developer: 'W3C Recommendation',
+      standardOrType: 'W3C XML 1.0 Specification',
+      mimeTypeDetailed: 'application/xml / text/xml',
+      keyFeatures: ['Древовидная иерархия элементов', 'Атрибуты и вложенный текст', 'Валидация через DTD/XSD'],
+      syntaxTips: 'Все открытые теги должны иметь соответствующие закрывающие теги.',
+      relatedFormats: ['json', 'yaml'],
+    },
+    sampleContent: `<?xml version="1.0" encoding="UTF-8"?>\n<catalog>\n  <item id="101">\n    <name>Умная колонка</name>\n    <price>7990</price>\n    <inStock>true</inStock>\n  </item>\n  <item id="102">\n    <name>Беспроводные наушники</name>\n    <price>12490</price>\n    <inStock>true</inStock>\n  </item>\n</catalog>`,
+  },
+
+  // 26. Markdown (.md) -> HTML, TXT, CSV Table
+  {
+    id: 'md',
+    extension: '.md',
+    name: 'Markdown Document (MD)',
+    category: 'ebooks',
+    description: 'Легковесный язык разметки Джона Грубера для форматирования текста в вебе, на GitHub, в Obsidian и Notion.',
+    usedFor: 'Документация GitHub (README), Obsidian, Notion, блоги, Telegram-боты',
+    targets: ['html', 'txt', 'csv'],
+    mimeType: 'text/markdown',
+    presets: [
+      { targetFormat: 'html', label: 'Markdown ➔ Готовый HTML (.html)', description: 'Чистая веб-страница с заголовками, списками и стилями', badge: 'HTML' },
+      { targetFormat: 'txt', label: 'Markdown ➔ Обычный текст (.txt)', description: 'Очистка от спецсимволов разметки (*, #, `)', badge: 'Текст' },
+      { targetFormat: 'csv', label: 'Markdown ➔ Таблица CSV (.csv)', description: 'Извлечение таблиц Markdown в формат CSV/Excel', badge: 'Excel' },
+    ],
+    details: {
+      developer: 'John Gruber & Aaron Swartz',
+      standardOrType: 'CommonMark Specification',
+      mimeTypeDetailed: 'text/markdown',
+      keyFeatures: ['Заголовки через решетки #', 'Выделение **жирным** и *курсивом*', 'Таблицы через вертикальные черты |'],
+      syntaxTips: 'Таблицы оформляются через символ | с разделительной строкой |---|---|.',
+      relatedFormats: ['html_table', 'csv'],
+    },
+    sampleContent: `# Отчет о проекте\n\nНиже представлена сводная таблица ключевых метрик:\n\n| Параметр | Значение | Статус |\n|---|---|---|\n| Конверсия | 4.8% | Отлично |\n| Отказы | 12% | Норма |\n| Время на сайте | 3м 45с | Выше среднего |`,
+  },
+
+  // 27. HTML Table (.html) -> CSV, JSON, Markdown Table
+  {
+    id: 'html_table',
+    extension: '.html',
+    name: 'HTML Data Table (.html)',
+    category: 'data',
+    description: 'Парсинг веб-таблиц <table><tr><th>/<td> и конвертация в структурированные данные Excel, JSON и Markdown.',
+    usedFor: 'Скрапинг веб-страниц, сохранение таблиц из браузера, экспорт из отчетов',
+    targets: ['csv', 'json', 'md'],
+    mimeType: 'text/html',
+    presets: [
+      { targetFormat: 'csv', label: 'HTML Table ➔ Таблица CSV (.csv)', description: 'Извлечение ячеек таблицы для Excel и Google Sheets', badge: 'Excel' },
+      { targetFormat: 'json', label: 'HTML Table ➔ JSON (.json)', description: 'Преобразование строк в массив объектов', badge: 'JSON' },
+      { targetFormat: 'md', label: 'HTML Table ➔ Markdown Table (.md)', description: 'Таблица для документации GitHub', badge: 'Markdown' },
+    ],
+    details: {
+      developer: 'W3C HTML5 Standard',
+      standardOrType: 'HTML <table> specification',
+      mimeTypeDetailed: 'text/html',
+      keyFeatures: ['Парсинг строк <tr> и ячеек <th>, <td>', 'Автоматическое определение заголовков столбцов', 'Очистка от HTML-тегов внутри текста'],
+      syntaxTips: 'Вставьте фрагмент с тегом <table> или всю веб-страницу.',
+      relatedFormats: ['csv', 'json', 'md'],
+    },
+    sampleContent: `<table border="1">\n  <tr>\n    <th>Сотрудник</th>\n    <th>Отдел</th>\n    <th>Проекты</th>\n  </tr>\n  <tr>\n    <td>Дмитрий Соколов</td>\n    <td>Разработка</td>\n    <td>Мобильное приложение</td>\n  </tr>\n  <tr>\n    <td>Анна Кузнецова</td>\n    <td>Маркетинг</td>\n    <td>SEO и Контекст</td>\n  </tr>\n</table>`,
+  },
+
+  // =========================================================================
+  // 3. БИНАРНЫЕ, ГРАФИКА И МЕДИА (3 формата: 28-30)
+  // =========================================================================
+
+  // 28. Base64 (.txt) -> Raw Binary, Plain Text, Image/SVG
+  {
+    id: 'base64',
+    extension: '.txt',
+    name: 'Base64 Encoded (.txt / .b64)',
+    category: 'data',
+    description: 'Двоично-текстовое кодирование данных (RFC 4648) для передачи файлов, изображений и бинарных данных через текст.',
+    usedFor: 'Data URI в вебе, вложения email (MIME), токены JWT, сохранение картинок в JSON',
+    targets: ['bin', 'txt', 'img'],
+    mimeType: 'text/plain',
+    presets: [
+      { targetFormat: 'txt', label: 'Base64 ➔ Обычный текст UTF-8 (.txt)', description: 'Декодирование текстовых строк из Base64', badge: 'Текст' },
+      { targetFormat: 'bin', label: 'Base64 ➔ Бинарный файл (.bin)', description: 'Восстановление исходного двоичного файла', badge: 'Бинарник' },
+      { targetFormat: 'img', label: 'Base64 ➔ Изображение / SVG (.png / .svg)', description: 'Декодирование картинки или иконки', badge: 'Изображение' },
+    ],
+    details: {
+      developer: 'IETF RFC 4648',
+      standardOrType: 'Binary-to-Text Encoding',
+      mimeTypeDetailed: 'text/plain',
+      keyFeatures: ['Алфавит из 64 символов A-Z, a-z, 0-9, +, /', 'Поддержка data:image/png;base64,... префиксов', '100% безопасная передача по протоколам текста'],
+      syntaxTips: 'Можно вставлять как чистую строку Base64, так и Data URL с заголовком.',
+      relatedFormats: ['svg', 'json'],
+    },
+    sampleContent: `0J/RgNC40LLQtdGCLCDQvNC40YAhINCt0YLQviDRgdC+0L7QsdGJ0LXQvdC40LUg0LfQsNC60L7QtNC40YDQvtCy0LDQvdC+INCyIEJhc2U2NC4=`,
+  },
+
+  // 29. SVG (.svg) -> PNG, WebP, JPEG, Base64 Data URI, JSX
+  {
+    id: 'svg',
+    extension: '.svg',
+    name: 'Scalable Vector Graphics (SVG)',
+    category: 'vector',
+    description: 'Открытый стандарт W3C для двухмерной векторной графики, логотипов, диаграмм и интерфейсных иконок.',
+    usedFor: 'Веб-дизайн, векторные логотипы, иконки UI, печать, иллюстрации',
+    targets: ['png', 'webp', 'jpeg', 'datauri', 'jsx'],
+    mimeType: 'image/svg+xml',
+    presets: [
+      { targetFormat: 'png', label: 'SVG ➔ Растровый PNG HD (.png)', description: 'Аппаратный рендеринг через HTML5 Canvas с прозрачностью', badge: 'PNG' },
+      { targetFormat: 'webp', label: 'SVG ➔ Современный WebP (.webp)', description: 'Сжатый графический формат для быстрой загрузки веб-страниц', badge: 'WebP' },
+      { targetFormat: 'jpeg', label: 'SVG ➔ Картинка JPEG (.jpg)', description: 'Растровое фото с белым фоном для совместимости', badge: 'JPEG' },
+      { targetFormat: 'datauri', label: 'SVG ➔ Base64 Data URI (.txt)', description: 'Строка для вставки прямо в CSS или HTML без внешних файлов', badge: 'CSS' },
+      { targetFormat: 'jsx', label: 'SVG ➔ React JSX Компонент (.tsx)', description: 'Готовый React-компонент с поддержкой пропсов и Tailwind', badge: 'React' },
+    ],
+    details: {
+      developer: 'W3C SVG Working Group',
+      standardOrType: 'W3C Recommendation XML',
+      mimeTypeDetailed: 'image/svg+xml',
+      keyFeatures: ['Масштабирование без потери четкости', 'Элементы path, circle, rect, text', 'Рендеринг в Canvas любого разрешения'],
+      syntaxTips: 'Корневой тег обязательно содержит viewBox="0 0 w h".',
+      relatedFormats: ['png', 'webp'],
+    },
+    sampleContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">\n  <circle cx="50" cy="50" r="46" fill="#4f46e5" />\n  <path d="M30 50 L45 65 L70 35" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />\n</svg>`,
+  },
+
+  // 30. M3U / M3U8 (.m3u, .m3u8) -> CSV, JSON, TXT (чистые прямые ссылки), PLS
+  {
+    id: 'm3u',
+    extension: '.m3u',
+    name: 'Multimedia Playlist (M3U / M3U8)',
+    category: 'audio',
+    description: 'Универсальный формат текстовых списков воспроизведения аудио и видео, онлайн-радио и потоков IPTV.',
+    usedFor: 'IPTV, Winamp, VLC, онлайн-радио, HLS видеостриминг, медиаплееры',
+    targets: ['csv', 'json', 'txt', 'pls'],
+    mimeType: 'audio/x-mpegurl',
+    presets: [
+      { targetFormat: 'txt', label: 'M3U ➔ Чистые прямые ссылки (.txt)', description: 'Извлечение всех прямых URL потоков без мусора и дескрипторов', badge: 'Прямые URL' },
+      { targetFormat: 'csv', label: 'M3U ➔ Таблица каналов CSV (.csv)', description: 'Названия треков/каналов, длительности и адреса потоков', badge: 'Excel' },
+      { targetFormat: 'json', label: 'M3U ➔ Массив JSON (.json)', description: 'Структурированный список воспроизведения для приложений', badge: 'JSON' },
+      { targetFormat: 'pls', label: 'M3U ➔ Winamp Playlist (.pls)', description: 'Конвертация в формат Winamp и интернет-радио', badge: 'PLS' },
+    ],
+    details: {
+      developer: 'Fraunhofer IIS / Apple Inc. (HLS)',
+      standardOrType: 'Extended M3U Playlist (RFC 8216)',
+      mimeTypeDetailed: 'audio/x-mpegurl / application/vnd.apple.mpegurl',
+      keyFeatures: ['Директивы #EXTINF:длительность,название', 'Поддержка URL адресов и локальных путей', 'Кодировка UTF-8 (M3U8)'],
+      syntaxTips: 'Строки с решеткой # содержат метаданные, следующая строка — адрес потока.',
+      relatedFormats: ['pls', 'cue'],
+    },
+    sampleContent: `#EXTM3U\n#EXTINF:240,Chillhop Radio - Beats to Relax\nhttps://stream.example.com/chillhop.mp3\n#EXTINF:180,RetroWave Instrumental 80s\nhttps://stream.example.com/synthwave.mp3\n#EXTINF:320,Deep Ambient Space Journey\nhttps://stream.example.com/ambient.ogg`,
+  },
+
+  // =========================================================================
+  // ДОПОЛНИТЕЛЬНЫЕ СПЕЦИАЛИЗИРОВАННЫЕ ФОРМАТЫ (Гео, 3D, Наука, Контакты)
+  // =========================================================================
+
+  // GPX
+  {
+    id: 'gpx',
+    extension: '.gpx',
+    name: 'GPS Exchange Format (GPX)',
+    category: 'geo',
+    description: 'XML-формат сохранения маршрутов, путевых точек и треков навигаторов Garmin, OsmAnd, Strava.',
+    usedFor: 'Навигаторы Garmin/Magellan, Strava, фитнес-треки, туризм',
+    targets: ['kml', 'geojson', 'csv', 'wkt'],
+    mimeType: 'application/gpx+xml',
+    presets: [
+      { targetFormat: 'kml', label: 'GPX ➔ Google Earth KML (.kml)', description: 'Просмотр трехмерного рельефного маршрута в Google Earth', badge: '3D Карты' },
+      { targetFormat: 'geojson', label: 'GPX ➔ GeoJSON (.geojson)', description: 'Отображение на веб-картах Leaflet, Mapbox', badge: 'Веб-ГИС' },
+      { targetFormat: 'csv', label: 'GPX ➔ Таблица точек CSV (.csv)', description: 'Анализ координат, высоты и времени в Excel', badge: 'Excel' },
+    ],
+    sampleContent: `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Demo">\n  <trk>\n    <name>Горный трек</name>\n    <trkseg>\n      <trkpt lat="55.7558" lon="37.6173"><ele>156.0</ele><time>2026-09-06T10:00:00Z</time></trkpt>\n      <trkpt lat="55.7565" lon="37.6185"><ele>158.5</ele><time>2026-09-06T10:02:00Z</time></trkpt>\n    </trkseg>\n  </trk>\n</gpx>`,
+  },
+
+  // KML
+  {
+    id: 'kml',
+    extension: '.kml',
+    name: 'Keyhole Markup Language (KML)',
+    category: 'geo',
+    description: 'Формат геоданных картографических сервисов Google Earth, Google Мои карты и SAS.Планета.',
+    usedFor: 'Google Earth, спутниковые снимки, геодезия, карты',
+    targets: ['gpx', 'geojson', 'csv', 'wkt'],
+    mimeType: 'application/vnd.google-earth.kml+xml',
+    presets: [
+      { targetFormat: 'gpx', label: 'KML ➔ GPS Exchange (.gpx)', description: 'Загрузка в навигатор Garmin или часы', badge: 'Навигатор' },
+      { targetFormat: 'geojson', label: 'KML ➔ GeoJSON (.geojson)', description: 'Использование в веб-приложениях', badge: 'Веб' },
+      { targetFormat: 'csv', label: 'KML ➔ Таблица точек (.csv)', description: 'Экспорт координат для расчетов', badge: 'Таблица' },
+    ],
+    sampleContent: `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <Placemark>\n      <name>Маршрут</name>\n      <LineString>\n        <coordinates>37.6173,55.7558,150 37.6185,55.7565,155</coordinates>\n      </LineString>\n    </Placemark>\n  </Document>\n</kml>`,
+  },
+
+  // GeoJSON
+  {
+    id: 'geojson',
+    extension: '.geojson',
+    name: 'GeoJSON',
+    category: 'geo',
+    description: 'Стандарт кодирования географических структур данных на базе JSON (Leaflet, Mapbox, OpenLayers).',
+    usedFor: 'Веб-карты (Mapbox, Leaflet), геопорталы, аналитика пространственных данных',
+    targets: ['gpx', 'kml', 'csv', 'wkt'],
+    mimeType: 'application/geo+json',
+    presets: [
+      { targetFormat: 'gpx', label: 'GeoJSON ➔ GPX (.gpx)', description: 'Загрузка слоя в физический навигатор', badge: 'Garmin' },
+      { targetFormat: 'kml', label: 'GeoJSON ➔ Google Earth KML (.kml)', description: 'Визуализация на 3D глобусе', badge: 'Earth' },
+    ],
+    sampleContent: `{\n  "type": "FeatureCollection",\n  "features": [\n    {\n      "type": "Feature",\n      "geometry": {\n        "type": "LineString",\n        "coordinates": [[37.6173, 55.7558, 150], [37.6185, 55.7565, 155]]\n      }\n    }\n  ]\n}`,
+  },
+
+  // 3D OBJ
+  {
+    id: 'obj',
+    extension: '.obj',
+    name: 'Wavefront 3D Object (.obj)',
+    category: '3d',
+    description: 'Универсальный текстовый формат описания полигональной 3D-геометрии (Blender, Maya, 3ds Max).',
+    usedFor: '3D-моделирование, компьютерные игры, AR/VR, визуализация',
+    targets: ['stl', 'csv', 'json'],
+    mimeType: 'model/obj',
+    presets: [
+      { targetFormat: 'stl', label: 'OBJ ➔ 3D-печать STL (.stl)', description: 'Подготовка модели для слайсеров Cura, PrusaSlicer', badge: '3D-печать' },
+    ],
+    sampleContent: `v 0.0 0.0 0.0\nv 1.0 0.0 0.0\nv 0.0 1.0 0.0\nf 1 2 3`,
+  },
+
+  // 3D STL
+  {
+    id: 'stl',
+    extension: '.stl',
+    name: 'Stereolithography 3D (STL)',
+    category: '3d',
+    description: 'Промышленный стандарт описания поверхности трехмерных объектов для аддитивного производства и 3D-печати.',
+    usedFor: '3D-принтеры, слайсеры (Cura, Bambu), инженерные САПР',
+    targets: ['obj', 'csv', 'json'],
+    mimeType: 'model/stl',
+    presets: [
+      { targetFormat: 'obj', label: 'STL ➔ Wavefront OBJ (.obj)', description: 'Импорт детали в Blender и 3D-редакторы', badge: 'Blender' },
+    ],
+    sampleContent: `solid Cube\n  facet normal 0 0 1\n    outer loop\n      vertex 0 0 0\n      vertex 1 0 0\n      vertex 1 1 0\n    endloop\n  endfacet\nendsolid`,
+  },
+
+  // BibTeX
+  {
+    id: 'bib',
+    extension: '.bib',
+    name: 'BibTeX Academic Database (.bib)',
+    category: 'scientific',
+    description: 'Библиографический формат для оформления научных статей и диссертаций в LaTeX / Overleaf.',
+    usedFor: 'LaTeX, Overleaf, научные статьи IEEE/Springer/ACM, Zotero, Mendeley',
+    targets: ['ris', 'csv', 'md', 'json'],
+    mimeType: 'application/x-bibtex',
+    presets: [
+      { targetFormat: 'ris', label: 'BibTeX ➔ RIS (.ris)', description: 'Импорт в Zotero, Mendeley, EndNote', badge: 'Zotero' },
+      { targetFormat: 'csv', label: 'BibTeX ➔ CSV (.csv)', description: 'Каталог публикаций в Excel', badge: 'Excel' },
+    ],
+    sampleContent: `@article{smith2024,\n  author = {Smith, John and Doe, Jane},\n  title = {Advances in Local File Processing},\n  journal = {Journal of Modern Computing},\n  year = {2024},\n  volume = {12},\n  pages = {100--115}\n}`,
+  },
+
+  // RIS
+  {
+    id: 'ris',
+    extension: '.ris',
+    name: 'Research Information Systems (.ris)',
+    category: 'scientific',
+    description: 'Стандартизированный формат обмена цитированиями между Zotero, Mendeley, Scopus и Web of Science.',
+    usedFor: 'Scopus, Web of Science, PubMed, библиографические менеджеры',
+    targets: ['bib', 'csv', 'txt', 'json'],
+    mimeType: 'application/x-research-info-systems',
+    presets: [
+      { targetFormat: 'bib', label: 'RIS ➔ BibTeX (.bib)', description: 'Вставка цитирований из Scopus в LaTeX/Overleaf', badge: 'LaTeX' },
+    ],
+    sampleContent: `TY  - JOUR\nAU  - Smith, John\nTI  - Advances in Local File Processing\nJO  - Journal of Modern Computing\nPY  - 2024\nER  - `,
+  },
+
+  // FB2
+  {
+    id: 'fb2',
+    extension: '.fb2',
+    name: 'FictionBook 2.0 (.fb2)',
+    category: 'ebooks',
+    description: 'Популярный XML-формат электронных книг для ридеров PocketBook, FBReader и CoolReader.',
+    usedFor: 'Электронные книги, ридеры PocketBook, электронные библиотеки',
+    targets: ['epub', 'txt', 'md', 'html'],
+    mimeType: 'application/x-fictionbook+xml',
+    presets: [
+      { targetFormat: 'epub', label: 'FB2 ➔ EPUB (.epub)', description: 'Чтение книги в Apple Books на iPhone/iPad', badge: 'Apple Books' },
+      { targetFormat: 'txt', label: 'FB2 ➔ Текст (.txt)', description: 'Чтение текста книги в любом блокноте', badge: 'Текст' },
+    ],
+    sampleContent: `<?xml version="1.0" encoding="utf-8"?>\n<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">\n  <description>\n    <title-info>\n      <book-title>Пример книги</book-title>\n      <author><first-name>Лев</first-name><last-name>Толстой</last-name></author>\n    </title-info>\n  </description>\n  <body>\n    <section>\n      <title><p>Глава 1</p></title>\n      <p>Текст первой главы литературного произведения.</p>\n    </section>\n  </body>\n</FictionBook>`,
+  },
+
+  // CUE Sheet
+  {
+    id: 'cue',
+    extension: '.cue',
+    name: 'CUE Sheet Audio (.cue)',
+    category: 'audio',
+    description: 'Текстовый файл разметки сплошных аудиообразов FLAC, WAV, APE на отдельные музыкальные треки.',
+    usedFor: 'Разрезка образов альбомов FLAC/APE, Foobar2000, AIMP, главы YouTube',
+    targets: ['m3u8', 'lrc', 'txt', 'json'],
+    mimeType: 'application/x-cue',
+    presets: [
+      { targetFormat: 'm3u8', label: 'CUE ➔ Плейлист M3U8 (.m3u8)', description: 'Список треков альбома для плееров', badge: 'Плейлист' },
+      { targetFormat: 'txt', label: 'CUE ➔ Главы YouTube (.txt)', description: 'Таймкоды глав 00:00 Название для описания видео', badge: 'YouTube' },
+    ],
+    sampleContent: `PERFORMER "Synthwave Band"\nTITLE "Retro Future"\nFILE "album.flac" WAVE\n  TRACK 01 AUDIO\n    TITLE "Neon Lights"\n    INDEX 01 00:00:00\n  TRACK 02 AUDIO\n    TITLE "Midnight Drive"\n    INDEX 01 03:45:00`,
+  },
+
+  // iCalendar ICS
+  {
+    id: 'ics',
+    extension: '.ics',
+    name: 'iCalendar (.ics)',
+    category: 'pim',
+    description: 'Общепринятый формат событий календаря и расписаний (Google Календарь, Apple, Outlook).',
+    usedFor: 'Google Calendar, расписания встреч, бронирования авиабилетов и отелей',
+    targets: ['csv', 'json', 'md'],
+    mimeType: 'text/calendar',
+    presets: [
+      { targetFormat: 'csv', label: 'ICS ➔ Таблица событий CSV (.csv)', description: 'Выгрузка расписания в Excel', badge: 'Excel' },
+    ],
+    sampleContent: `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:Командный созвон\nDTSTART:20260906T100000Z\nDTEND:20260906T110000Z\nDESCRIPTION:Обсуждение новых конвертеров форматов\nEND:VEVENT\nEND:VCALENDAR`,
+  },
+
+  // vCard VCF
+  {
+    id: 'vcf',
+    extension: '.vcf',
+    name: 'vCard (.vcf)',
+    category: 'pim',
+    description: 'Электронные визитные карточки и контакты со смартфонов (iOS, Android, Gmail, Outlook).',
+    usedFor: 'Адресные книги iPhone/Android, экспорт контактов в CRM, бекапы',
+    targets: ['csv', 'json'],
+    mimeType: 'text/vcard',
+    presets: [
+      { targetFormat: 'csv', label: 'VCF ➔ Таблица контактов CSV (.csv)', description: 'Все телефоны, имена и email в Excel', badge: 'Excel' },
+    ],
+    sampleContent: `BEGIN:VCARD\nVERSION:3.0\nFN:Александр Смирнов\nTEL;TYPE=CELL:+79991234567\nEMAIL:alex@example.com\nORG:Технологии Будущего\nEND:VCARD`,
+  },
+
+  // HAR
+  {
+    id: 'har',
+    extension: '.har',
+    name: 'HTTP Archive (.har)',
+    category: 'data',
+    description: 'Архив сетевых запросов браузера из вкладки DevTools Network (F12) в Chrome, Firefox, Safari.',
+    usedFor: 'Отладка веб-запросов, генерация cURL команд, аудит скорости сайта',
+    targets: ['curl', 'csv', 'json'],
+    mimeType: 'application/json',
+    presets: [
+      { targetFormat: 'curl', label: 'HAR ➔ Команды cURL (.sh)', description: 'Повтор всех сетевых запросов из терминала', badge: 'cURL' },
+      { targetFormat: 'csv', label: 'HAR ➔ Анализ запросов CSV (.csv)', description: 'Статусы, URL и время ответа в таблице', badge: 'Excel' },
+    ],
+    sampleContent: `{\n  "log": {\n    "version": "1.2",\n    "entries": [\n      {\n        "request": { "method": "GET", "url": "https://api.example.com/status", "headers": [] },\n        "response": { "status": 200, "content": { "mimeType": "application/json" } },\n        "time": 42\n      }\n    ]\n  }\n}`,
+  },
+];

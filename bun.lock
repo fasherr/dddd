@@ -1,0 +1,781 @@
+/**
+ * Extended Subtitle Parsers and Generators
+ * Supports:
+ * - TTML / DFXP
+ * - SAMI (.smi)
+ * - SubStation Alpha (.ssa)
+ * - Spruce STL (.stl)
+ * - Scenarist Closed Caption (.scc)
+ * - QuickTime Text (.qt.txt / .txt)
+ * - Avid DS Subtitle (.txt)
+ * - Cheetah CAP (.cap)
+ * - EBU-STL text dump (.stl)
+ * - YouTube SBV & TimedText XML
+ * - SubViewer 1.0 (.sub) & 2.0 (.sub)
+ * - MicroDVD (.sub)
+ * - MPSub (.sub)
+ * - RealText (.rt)
+ *
+ * Exporters:
+ * - SRT, VTT, ASS, TXT, JSON
+ * - CSV, TSV, HTML (interactive transcript), Markdown Table, Audacity labels
+ */
+
+import { SubtitleCue, formatTimeSRT, formatTimeVTT, formatTimeASS, parseTimestamp } from './subtitles';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function timecodeToMs(tc: string, defaultFps = 25): number {
+  const clean = tc.trim();
+  // HH:MM:SS:FF or HH:MM:SS;FF (drop-frame) or HH:MM:SS.mmm
+  const parts = clean.split(/[:;,.]/);
+  if (parts.length >= 4) {
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const s = parseInt(parts[2], 10) || 0;
+    const f = parseInt(parts[3], 10) || 0;
+    const msFromFrames = Math.round((f / defaultFps) * 1000);
+    return (h * 3600 + m * 60 + s) * 1000 + msFromFrames;
+  }
+  if (parts.length === 3) {
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const s = parseFloat(parts[2]) || 0;
+    return Math.round((h * 3600 + m * 60 + s) * 1000);
+  }
+  if (parts.length === 2) {
+    const m = parseInt(parts[0], 10) || 0;
+    const s = parseFloat(parts[1]) || 0;
+    return Math.round((m * 60 + s) * 1000);
+  }
+  const sec = parseFloat(clean);
+  return isNaN(sec) ? 0 : Math.round(sec * 1000);
+}
+
+// ---------------------------------------------------------------------------
+// 1. SAMI (.smi, .sami)
+// ---------------------------------------------------------------------------
+export function parseSAMI(content: string): SubtitleCue[] {
+  const cues: SubtitleCue[] = [];
+  const syncRegex = /<SYNC\s+Start\s*=\s*['"]?(\d+)['"]?[^>]*>(.*?)(?=(?:<SYNC|$))/gis;
+  let match: RegExpExecArray | null;
+  const rawItems: { startMs: number; text: string }[] = [];
+
+  while ((match = syncRegex.exec(content)) !== null) {
+    const startMs = parseInt(match[1], 10);
+    const rawHtml = match[2];
+    const cleanText = rawHtml
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .trim();
+
+    if (cleanText && cleanText !== '&nbsp;') {
+      rawItems.push({ startMs, text: cleanText });
+    }
+  }
+
+  for (let i = 0; i < rawItems.length; i++) {
+    const item = rawItems[i];
+    const next = rawItems[i + 1];
+    const endMs = next ? Math.min(next.startMs, item.startMs + 5000) : item.startMs + 4000;
+
+    cues.push({
+      id: String(i + 1),
+      startMs: item.startMs,
+      endMs,
+      text: item.text,
+    });
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 2. TTML & DFXP (.ttml, .dfxp)
+// ---------------------------------------------------------------------------
+export function parseTTML(content: string): SubtitleCue[] {
+  const cues: SubtitleCue[] = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, 'application/xml');
+  const pElements = Array.from(doc.querySelectorAll('p, tt\\:p'));
+
+  pElements.forEach((p, idx) => {
+    const begin = p.getAttribute('begin') || p.getAttribute('t') || '00:00:00.000';
+    const end = p.getAttribute('end');
+    const dur = p.getAttribute('dur') || p.getAttribute('d');
+    
+    // Convert spans with line breaks
+    let text = '';
+    p.childNodes.forEach(child => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        text += child.textContent;
+      } else if (child.nodeName.toLowerCase() === 'br' || child.nodeName.toLowerCase() === 'tt:br') {
+        text += '\n';
+      } else {
+        text += child.textContent;
+      }
+    });
+    text = text.trim();
+
+    if (text) {
+      const startMs = timecodeToMs(begin);
+      let endMs: number;
+      if (end) {
+        endMs = timecodeToMs(end);
+      } else if (dur) {
+        endMs = startMs + timecodeToMs(dur);
+      } else {
+        endMs = startMs + 4000;
+      }
+
+      cues.push({
+        id: String(idx + 1),
+        startMs,
+        endMs: endMs > startMs ? endMs : startMs + 4000,
+        text,
+      });
+    }
+  });
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 3. Timed Text XML (YouTube transcript / TTXML)
+// ---------------------------------------------------------------------------
+export function parseTimedTextXML(content: string): SubtitleCue[] {
+  const cues: SubtitleCue[] = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, 'application/xml');
+  
+  // YouTube transcript xml format: <transcript><text start="1.23" dur="4.56">Text</text></transcript>
+  const textNodes = Array.from(doc.querySelectorAll('text'));
+  if (textNodes.length > 0) {
+    textNodes.forEach((node, idx) => {
+      const start = parseFloat(node.getAttribute('start') || '0');
+      const dur = parseFloat(node.getAttribute('dur') || '3.5');
+      const raw = node.textContent?.trim() || '';
+      // Decode HTML entities
+      const text = raw.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      if (text) {
+        const startMs = Math.round(start * 1000);
+        const endMs = Math.round((start + dur) * 1000);
+        cues.push({ id: String(idx + 1), startMs, endMs, text });
+      }
+    });
+    return cues;
+  }
+
+  // Fallback to general TTML parser
+  return parseTTML(content);
+}
+
+// ---------------------------------------------------------------------------
+// 4. Spruce STL (.stl) Subtitle format (DVD Studio Pro)
+// ---------------------------------------------------------------------------
+export function parseSpruceSTL(content: string): SubtitleCue[] {
+  // Format:
+  // 00:00:01:00 , 00:00:04:00 , Text line 1|Text line 2
+  // or 00:00:01:00 , 00:00:04:00 , Text line
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  let id = 1;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('$') || line.startsWith('//') || line.startsWith('#')) {
+      continue;
+    }
+
+    // Match 00:00:00:00 , 00:00:00:00 , Text
+    const match = line.match(/^(\d{2}:\d{2}:\d{2}[:;]\d{2})\s*,\s*(\d{2}:\d{2}:\d{2}[:;]\d{2})\s*,\s*(.+)$/);
+    if (match) {
+      const startMs = timecodeToMs(match[1]);
+      const endMs = timecodeToMs(match[2]);
+      const text = match[3].replace(/\|/g, '\n').trim();
+      cues.push({ id: String(id++), startMs, endMs, text });
+    }
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 5. Scenarist Closed Caption (.scc)
+// ---------------------------------------------------------------------------
+export function parseSCC(content: string): SubtitleCue[] {
+  // Format:
+  // Scenarist_SCC V1.0
+  // 01:00:00:00\t9420 9420 947a 947a ...
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  let id = 1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.startsWith('Scenarist_SCC')) continue;
+
+    const match = line.match(/^(\d{2}:\d{2}:\d{2}[:;]\d{2})\s+([0-9a-fA-F\s]+)$/);
+    if (match) {
+      const startMs = timecodeToMs(match[1], 29.97);
+      const hexTokens = match[2].trim().split(/\s+/);
+      let decodedChars = '';
+
+      for (const token of hexTokens) {
+        if (token.length === 4) {
+          const b1 = parseInt(token.substring(0, 2), 16) & 0x7f;
+          const b2 = parseInt(token.substring(2, 4), 16) & 0x7f;
+          // printable ASCII
+          if (b1 >= 32 && b1 <= 126) decodedChars += String.fromCharCode(b1);
+          if (b2 >= 32 && b2 <= 126) decodedChars += String.fromCharCode(b2);
+        }
+      }
+
+      const text = decodedChars.trim();
+      if (text) {
+        const nextLine = lines.slice(i + 1).find(l => /^\d{2}:\d{2}:\d{2}[:;]\d{2}/.test(l.trim()));
+        let endMs = startMs + 3500;
+        if (nextLine) {
+          const nextMatch = nextLine.match(/^(\d{2}:\d{2}:\d{2}[:;]\d{2})/);
+          if (nextMatch) {
+            endMs = Math.min(timecodeToMs(nextMatch[1], 29.97), startMs + 6000);
+          }
+        }
+        cues.push({ id: String(id++), startMs, endMs, text });
+      }
+    }
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 6. QuickTime Text (.qt.txt / .txt)
+// ---------------------------------------------------------------------------
+export function parseQuickTimeText(content: string): SubtitleCue[] {
+  // Format:
+  // {QTtext} {font:Helvetica}
+  // [00:00:01.00]
+  // Text line 1
+  // [00:00:04.00]
+  // Text line 2
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  const entries: { ms: number; text: string }[] = [];
+  let currentMs: number | null = null;
+  let textBuffer: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('{QTtext') || trimmed.startsWith('{font:') || trimmed.startsWith('{size:')) {
+      continue;
+    }
+
+    const timeMatch = trimmed.match(/^\[(\d{2}:\d{2}:\d{2}[\.:]\d{2,3})\]$/);
+    if (timeMatch) {
+      if (currentMs !== null && textBuffer.length > 0) {
+        entries.push({ ms: currentMs, text: textBuffer.join('\n').trim() });
+        textBuffer = [];
+      }
+      currentMs = timecodeToMs(timeMatch[1]);
+    } else if (currentMs !== null && trimmed) {
+      textBuffer.push(trimmed);
+    }
+  }
+
+  if (currentMs !== null && textBuffer.length > 0) {
+    entries.push({ ms: currentMs, text: textBuffer.join('\n').trim() });
+  }
+
+  for (let i = 0; i < entries.length; i++) {
+    const cur = entries[i];
+    const next = entries[i + 1];
+    const endMs = next ? next.ms : cur.ms + 3500;
+    if (cur.text) {
+      cues.push({ id: String(i + 1), startMs: cur.ms, endMs, text: cur.text });
+    }
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 7. Avid DS Subtitle (.txt)
+// ---------------------------------------------------------------------------
+export function parseAvidDS(content: string): SubtitleCue[] {
+  // Format:
+  // @ This is an Avid DS subtitle file
+  // <begin subtitles>
+  // 01:00:00:00 01:00:04:00
+  // Text line
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  let id = 1;
+  let inSubs = false;
+  let currentTime: { start: number; end: number } | null = null;
+  let currentText: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (currentTime && currentText.length > 0) {
+        cues.push({
+          id: String(id++),
+          startMs: currentTime.start,
+          endMs: currentTime.end,
+          text: currentText.join('\n'),
+        });
+        currentTime = null;
+        currentText = [];
+      }
+      continue;
+    }
+
+    if (trimmed.toLowerCase().includes('<begin subtitles>')) {
+      inSubs = true;
+      continue;
+    }
+    if (trimmed.toLowerCase().includes('<end subtitles>')) {
+      inSubs = false;
+      break;
+    }
+
+    if (!inSubs && !/^\d{2}:\d{2}:\d{2}/.test(trimmed)) {
+      continue;
+    }
+
+    const timeMatch = trimmed.match(/^(\d{2}:\d{2}:\d{2}[:;]\d{2})\s+(\d{2}:\d{2}:\d{2}[:;]\d{2})$/);
+    if (timeMatch) {
+      if (currentTime && currentText.length > 0) {
+        cues.push({
+          id: String(id++),
+          startMs: currentTime.start,
+          endMs: currentTime.end,
+          text: currentText.join('\n'),
+        });
+        currentText = [];
+      }
+      currentTime = {
+        start: timecodeToMs(timeMatch[1]),
+        end: timecodeToMs(timeMatch[2]),
+      };
+    } else if (currentTime) {
+      currentText.push(trimmed);
+    }
+  }
+
+  if (currentTime && currentText.length > 0) {
+    cues.push({
+      id: String(id++),
+      startMs: currentTime.start,
+      endMs: currentTime.end,
+      text: currentText.join('\n'),
+    });
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 8. Cheetah CAP (.cap) / EBU-STL Text
+// ---------------------------------------------------------------------------
+export function parseCheetahCAP(content: string): SubtitleCue[] {
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  let id = 1;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = trimmed.match(/^(\d{2}:\d{2}:\d{2}[:;]\d{2})\s+(.+)$/);
+    if (match) {
+      const startMs = timecodeToMs(match[1]);
+      cues.push({
+        id: String(id++),
+        startMs,
+        endMs: startMs + 4000,
+        text: match[2].trim(),
+      });
+    }
+  }
+
+  for (let i = 0; i < cues.length - 1; i++) {
+    cues[i].endMs = Math.min(cues[i + 1].startMs, cues[i].startMs + 4500);
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 9. SubViewer 1.0 & 2.0 (.sub)
+// ---------------------------------------------------------------------------
+export function parseSubViewer2(content: string): SubtitleCue[] {
+  // Format:
+  // 00:00:01.00,00:00:04.00
+  // Line 1[br]Line 2
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  let id = 1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const match = line.match(/^(\d{2}:\d{2}:\d{2}\.\d{2}),(\d{2}:\d{2}:\d{2}\.\d{2})$/);
+    if (match) {
+      const startMs = timecodeToMs(match[1]);
+      const endMs = timecodeToMs(match[2]);
+      const nextLine = lines[i + 1] || '';
+      const text = nextLine.replace(/\[br\]/gi, '\n').trim();
+      if (text) {
+        cues.push({ id: String(id++), startMs, endMs, text });
+      }
+    }
+  }
+
+  return cues;
+}
+
+export function parseSubViewer1(content: string): SubtitleCue[] {
+  // Format:
+  // [00:01:23]
+  // Line of text
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const items: { ms: number; text: string }[] = [];
+  let currentMs: number | null = null;
+  let textLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = trimmed.match(/^\[(\d{2}:\d{2}:\d{2})\]$/);
+    if (match) {
+      if (currentMs !== null && textLines.length > 0) {
+        items.push({ ms: currentMs, text: textLines.join('\n') });
+        textLines = [];
+      }
+      currentMs = timecodeToMs(match[1]);
+    } else if (currentMs !== null && trimmed) {
+      textLines.push(trimmed);
+    }
+  }
+
+  if (currentMs !== null && textLines.length > 0) {
+    items.push({ ms: currentMs, text: textLines.join('\n') });
+  }
+
+  const cues: SubtitleCue[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const cur = items[i];
+    const next = items[i + 1];
+    cues.push({
+      id: String(i + 1),
+      startMs: cur.ms,
+      endMs: next ? next.ms : cur.ms + 3500,
+      text: cur.text,
+    });
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 10. MicroDVD (.sub)
+// ---------------------------------------------------------------------------
+export function parseMicroDVD(content: string, fps = 25): SubtitleCue[] {
+  // Format:
+  // {100}{250}Hello world|Second line
+  // First frame may specify FPS: {1}{1}25.000 or 23.976
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  let actualFps = fps;
+  let id = 1;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = trimmed.match(/^\{(\d+)\}\{(\d+)\}(.*)$/);
+    if (match) {
+      const fStart = parseInt(match[1], 10);
+      const fEnd = parseInt(match[2], 10);
+      const text = match[3].trim();
+
+      if (fStart === 1 && fEnd === 1) {
+        const detectedFps = parseFloat(text);
+        if (!isNaN(detectedFps) && detectedFps > 0) {
+          actualFps = detectedFps;
+          continue;
+        }
+      }
+
+      if (text) {
+        const startMs = Math.round((fStart / actualFps) * 1000);
+        const endMs = Math.round((fEnd / actualFps) * 1000);
+        cues.push({
+          id: String(id++),
+          startMs,
+          endMs: endMs > startMs ? endMs : startMs + 3000,
+          text: text.replace(/\|/g, '\n'),
+        });
+      }
+    }
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 11. MPSub (.sub)
+// ---------------------------------------------------------------------------
+export function parseMPSub(content: string): SubtitleCue[] {
+  // Format:
+  // FORMAT=TIME
+  // 1.2 3.4
+  // Text line
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const cues: SubtitleCue[] = [];
+  let curTimeSec = 0;
+  let id = 1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || trimmed.startsWith('FORMAT=') || trimmed.startsWith('#')) continue;
+
+    const match = trimmed.match(/^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/);
+    if (match) {
+      const pause = parseFloat(match[1]);
+      const dur = parseFloat(match[2]);
+      curTimeSec += pause;
+      const startMs = Math.round(curTimeSec * 1000);
+      const endMs = Math.round((curTimeSec + dur) * 1000);
+      curTimeSec += dur;
+
+      const nextLine = lines[i + 1] || '';
+      if (nextLine.trim()) {
+        cues.push({
+          id: String(id++),
+          startMs,
+          endMs,
+          text: nextLine.trim(),
+        });
+      }
+    }
+  }
+
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 12. RealText (.rt)
+// ---------------------------------------------------------------------------
+export function parseRealText(content: string): SubtitleCue[] {
+  const cues: SubtitleCue[] = [];
+  // <time begin="00:00:01.0"/><clear/>Subtitle text
+  const regex = /<time\s+begin=['"]?([^'"]+)['"]?[^>]*\/?>(?:<clear\s*\/?\s*>)?([^<]+)/gi;
+  let match: RegExpExecArray | null;
+  const items: { startMs: number; text: string }[] = [];
+
+  while ((match = regex.exec(content)) !== null) {
+    const timeStr = match[1];
+    const text = match[2].trim();
+    if (text) {
+      items.push({ startMs: timecodeToMs(timeStr), text });
+    }
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    const cur = items[i];
+    const next = items[i + 1];
+    cues.push({
+      id: String(i + 1),
+      startMs: cur.startMs,
+      endMs: next ? next.startMs : cur.startMs + 3500,
+      text: cur.text,
+    });
+  }
+
+  return cues;
+}
+
+// ===========================================================================
+// Subtitle Exporters for all requested outputs
+// ===========================================================================
+
+export function cuesToCSV(cues: SubtitleCue[]): string {
+  const headers = ['Number', 'Start_Time', 'End_Time', 'Duration_Sec', 'Text'];
+  const rows = cues.map((cue, idx) => {
+    const duration = ((cue.endMs - cue.startMs) / 1000).toFixed(3);
+    const escapedText = `"${cue.text.replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+    return [
+      idx + 1,
+      formatTimeSRT(cue.startMs),
+      formatTimeSRT(cue.endMs),
+      duration,
+      escapedText,
+    ].join(',');
+  });
+
+  return [headers.join(','), ...rows].join('\n');
+}
+
+export function cuesToTSV(cues: SubtitleCue[]): string {
+  const headers = ['Number', 'Start_Time', 'End_Time', 'Duration_Sec', 'Text'];
+  const rows = cues.map((cue, idx) => {
+    const duration = ((cue.endMs - cue.startMs) / 1000).toFixed(3);
+    const cleanText = cue.text.replace(/[\t\r\n]+/g, ' ');
+    return [
+      idx + 1,
+      formatTimeVTT(cue.startMs),
+      formatTimeVTT(cue.endMs),
+      duration,
+      cleanText,
+    ].join('\t');
+  });
+
+  return [headers.join('\t'), ...rows].join('\n');
+}
+
+export function cuesToMarkdownTable(cues: SubtitleCue[]): string {
+  const lines = [
+    '| # | Начало | Конец | Текст субтитра |',
+    '|---|---|---|---|',
+  ];
+
+  cues.forEach((c, idx) => {
+    const cleanText = c.text.replace(/\|/g, '\\|').replace(/\n/g, ' <br> ');
+    lines.push(`| ${idx + 1} | \`${formatTimeVTT(c.startMs)}\` | \`${formatTimeVTT(c.endMs)}\` | ${cleanText} |`);
+  });
+
+  return lines.join('\n');
+}
+
+export function cuesToAudacityLabels(cues: SubtitleCue[]): string {
+  // Format: start_seconds\tend_seconds\tlabel_text
+  return cues
+    .map(c => {
+      const startSec = (c.startMs / 1000).toFixed(6);
+      const endSec = (c.endMs / 1000).toFixed(6);
+      const text = c.text.replace(/[\t\r\n]+/g, ' ');
+      return `${startSec}\t${endSec}\t${text}`;
+    })
+    .join('\n');
+}
+
+export function cuesToInteractiveHTML(cues: SubtitleCue[], title = 'Интерактивная расшифровка субтитров'): string {
+  const itemsJson = JSON.stringify(
+    cues.map(c => ({
+      start: c.startMs / 1000,
+      end: c.endMs / 1000,
+      time: formatTimeVTT(c.startMs),
+      text: c.text,
+    }))
+  );
+
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      line-height: 1.6;
+      padding: 24px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+    .meta {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+    .search-box {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      outline: none;
+    }
+    .search-box:focus { border-color: #6366f1; ring: 2px solid #e0e7ff; }
+    .cue-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .cue-item {
+      display: flex;
+      gap: 16px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .cue-item:hover { background: #eef2ff; border-color: #c7d2fe; }
+    .cue-time {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: #6366f1;
+      white-space: nowrap;
+      padding-top: 2px;
+    }
+    .cue-text { font-size: 14px; color: #1e293b; flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>${title}</h1>
+    <div class="meta">Всего реплик: ${cues.length} | 100% автономный интерактивный документ</div>
+    <input type="text" id="search" class="search-box" placeholder="Поиск по тексту расшифровки...">
+    <ul class="cue-list" id="list"></ul>
+  </div>
+
+  <script>
+    const data = ${itemsJson};
+    const list = document.getElementById('list');
+    const search = document.getElementById('search');
+
+    function render(items) {
+      list.innerHTML = '';
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'cue-item';
+        li.innerHTML = '<span class="cue-time">' + item.time + '</span><span class="cue-text">' + item.text.replace(/\\n/g, '<br>') + '</span>';
+        li.onclick = () => {
+          navigator.clipboard.writeText(item.text);
+          li.style.background = '#dcfce7';
+          setTimeout(() => li.style.background = '', 600);
+        };
+        list.appendChild(li);
+      });
+    }
+
+    render(data);
+
+    search.oninput = (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = data.filter(d => d.text.toLowerCase().includes(q));
+      render(filtered);
+    };
+  </script>
+</body>
+</html>`;
+}
